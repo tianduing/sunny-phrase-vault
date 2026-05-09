@@ -1,5 +1,6 @@
 const CATEGORIES = [
   { key: "all", label: "全部", icon: "sparkles" },
+  { key: "uncategorized", label: "未分类", icon: "inbox" },
   { key: "fallen", label: "被击杀", icon: "skull" },
   { key: "counter", label: "反杀收割", icon: "swords" },
   { key: "teammate", label: "队友名场面", icon: "users" },
@@ -35,7 +36,7 @@ const RISK_LABELS = {
 const SEED_PHRASES = [
   {
     id: "seed-001",
-    text: "此番败走泉水，乃是韬光养晦。",
+    text: "此番败走泉水，乃是韬光养晦",
     category: "fallen",
     tone: "classic",
     risk: "safe",
@@ -43,7 +44,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-002",
-    text: "我不是被击杀，我是回泉水翻阅兵书。",
+    text: "我不是被击杀，我是回泉水翻阅兵书",
     category: "fallen",
     tone: "soft",
     risk: "safe",
@@ -51,7 +52,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-003",
-    text: "倒下的是角色，站起来的是理解。",
+    text: "倒下的是角色，站起来的是理解",
     category: "fallen",
     tone: "drama",
     risk: "safe",
@@ -59,7 +60,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-004",
-    text: "这波属于以身入局，给大家提供反面教材。",
+    text: "这波属于以身入局，给大家提供反面教材",
     category: "fallen",
     tone: "abstract",
     risk: "safe",
@@ -67,7 +68,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-005",
-    text: "阁下这一刀，颇有春秋笔法。",
+    text: "阁下这一刀，颇有春秋笔法",
     category: "fallen",
     tone: "yin",
     risk: "spicy",
@@ -75,7 +76,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-006",
-    text: "我去泉水充电，诸君且守半壁江山。",
+    text: "我去泉水充电，诸君且守半壁江山",
     category: "fallen",
     tone: "classic",
     risk: "safe",
@@ -83,7 +84,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-007",
-    text: "风水轮流转，刚才只是你家水表跑得快。",
+    text: "风水轮流转，刚才只是你家水表跑得快",
     category: "counter",
     tone: "abstract",
     risk: "spicy",
@@ -91,7 +92,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-008",
-    text: "先礼后兵，刚才礼完了。",
+    text: "先礼后兵，刚才礼完了",
     category: "counter",
     tone: "classic",
     risk: "spicy",
@@ -99,7 +100,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-009",
-    text: "你看，春风得意也要系安全带。",
+    text: "你看，春风得意也要系安全带",
     category: "counter",
     tone: "yin",
     risk: "spicy",
@@ -107,7 +108,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-010",
-    text: "血条见底，志气见顶。",
+    text: "血条见底，志气见顶",
     category: "counter",
     tone: "hype",
     risk: "safe",
@@ -115,7 +116,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-011",
-    text: "此剑归鞘之前，峡谷还得听我说两句。",
+    text: "此剑归鞘之前，峡谷还得听我说两句",
     category: "counter",
     tone: "drama",
     risk: "safe",
@@ -123,7 +124,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-012",
-    text: "队友此举，深得行为艺术三昧。",
+    text: "队友此举，深得行为艺术三昧",
     category: "teammate",
     tone: "yin",
     risk: "spicy",
@@ -131,7 +132,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-013",
-    text: "胜败乃兵家常事，关键是我们别常事常办。",
+    text: "胜败乃兵家常事，关键是我们别常事常办",
     category: "teammate",
     tone: "classic",
     risk: "safe",
@@ -139,7 +140,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-014",
-    text: "问题不大，问题正在变大。",
+    text: "问题不大，问题正在变大",
     category: "teammate",
     tone: "abstract",
     risk: "safe",
@@ -147,7 +148,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-015",
-    text: "别慌，大家都是峡谷里长出来的野草。",
+    text: "别慌，大家都是峡谷里长出来的野草",
     category: "teammate",
     tone: "soft",
     risk: "safe",
@@ -155,7 +156,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-016",
-    text: "这条龙不是丢了，是先寄存在对面名下。",
+    text: "这条龙不是丢了，是先寄存在对面名下",
     category: "objective",
     tone: "abstract",
     risk: "safe",
@@ -163,7 +164,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-017",
-    text: "龙坑风急，诸位莫要各奔东西。",
+    text: "龙坑风急，诸位莫要各奔东西",
     category: "objective",
     tone: "classic",
     risk: "safe",
@@ -171,7 +172,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-018",
-    text: "暴君一声吼，我方五人各有春秋。",
+    text: "暴君一声吼，我方五人各有春秋",
     category: "objective",
     tone: "yin",
     risk: "spicy",
@@ -179,7 +180,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-019",
-    text: "此刻不争龙，更待何时争晚饭。",
+    text: "此刻不争龙，更待何时争晚饭",
     category: "objective",
     tone: "abstract",
     risk: "safe",
@@ -187,7 +188,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-020",
-    text: "对线如弈棋，阁下一步一惊雷。",
+    text: "对线如弈棋，阁下一步一惊雷",
     category: "lane",
     tone: "classic",
     risk: "spicy",
@@ -195,7 +196,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-021",
-    text: "你压我兵线，我压住情绪，双方都有操作。",
+    text: "你压我兵线，我压住情绪，双方都有操作",
     category: "lane",
     tone: "soft",
     risk: "safe",
@@ -203,7 +204,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-022",
-    text: "草丛不是家，别住太久。",
+    text: "草丛不是家，别住太久",
     category: "lane",
     tone: "yin",
     risk: "spicy",
@@ -211,7 +212,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-023",
-    text: "塔下三分地，容我再苟一局春秋。",
+    text: "塔下三分地，容我再苟一局春秋",
     category: "lane",
     tone: "classic",
     risk: "safe",
@@ -219,7 +220,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-024",
-    text: "逆风不投，星火可燎原。",
+    text: "逆风不投，星火可燎原",
     category: "comeback",
     tone: "classic",
     risk: "safe",
@@ -227,7 +228,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-025",
-    text: "经济落后只是账面，气势领先全靠嘴硬。",
+    text: "经济落后只是账面，气势领先全靠嘴硬",
     category: "comeback",
     tone: "abstract",
     risk: "safe",
@@ -235,7 +236,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-026",
-    text: "别急，剧本刚翻到伏笔。",
+    text: "别急，剧本刚翻到伏笔",
     category: "comeback",
     tone: "drama",
     risk: "safe",
@@ -243,7 +244,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-027",
-    text: "我们虽处下风，仍可借东风。",
+    text: "我们虽处下风，仍可借东风",
     category: "comeback",
     tone: "classic",
     risk: "safe",
@@ -251,7 +252,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-028",
-    text: "顺风莫浪，浪里容易没有白条。",
+    text: "顺风莫浪，浪里容易没有白条",
     category: "ending",
     tone: "classic",
     risk: "safe",
@@ -259,7 +260,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-029",
-    text: "这一局尘埃落定，我的嘴还在补刀。",
+    text: "这一局尘埃落定，我的嘴还在补刀",
     category: "ending",
     tone: "abstract",
     risk: "safe",
@@ -267,7 +268,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-030",
-    text: "胜不骄，败不馁，截图先别发群里。",
+    text: "胜不骄，败不馁，截图先别发群里",
     category: "ending",
     tone: "soft",
     risk: "safe",
@@ -275,7 +276,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-031",
-    text: "今日峡谷风平浪静，除了我方心率。",
+    text: "今日峡谷风平浪静，除了我方心率",
     category: "ending",
     tone: "abstract",
     risk: "safe",
@@ -283,7 +284,7 @@ const SEED_PHRASES = [
   },
   {
     id: "seed-032",
-    text: "山重水复疑无路，复活甲后又一村。",
+    text: "山重水复疑无路，复活甲后又一村",
     category: "counter",
     tone: "classic",
     risk: "safe",
@@ -300,7 +301,8 @@ const state = {
   risk: "default",
   search: "",
   currentId: null,
-  custom: readStorage(STORAGE_KEY, []),
+  editingId: null,
+  custom: normalizeStoredPhrases(readStorage(STORAGE_KEY, [])),
   favorites: new Set(readStorage(FAVORITES_KEY, [])),
 };
 
@@ -328,12 +330,18 @@ const els = {
   phraseTone: $("#phraseTone"),
   phraseRisk: $("#phraseRisk"),
   phraseNote: $("#phraseNote"),
+  phraseMode: () => document.querySelector('input[name="phraseMode"]:checked'),
+  classifyBtn: $("#classifyBtn"),
+  submitBtn: $("#submitPhraseBtn"),
+  cancelEditBtn: $("#cancelEditBtn"),
   totalCount: $("#totalCount"),
   favoriteCount: $("#favoriteCount"),
   customCount: $("#customCount"),
   visibleCount: $("#visibleCount"),
   toast: $("#toast"),
 };
+
+writeStorage(STORAGE_KEY, state.custom);
 
 function readStorage(key, fallback) {
   try {
@@ -353,6 +361,32 @@ function makeId() {
     return window.crypto.randomUUID();
   }
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function trimSentencePeriod(text) {
+  return String(text || "")
+    .trim()
+    .replace(/[。．.]+$/g, "")
+    .trim();
+}
+
+function normalizePhrase(phrase) {
+  const categoryOk = CATEGORIES.some((item) => item.key === phrase.category && item.key !== "all");
+  const toneOk = TONES.some((item) => item.key === phrase.tone && item.key !== "all");
+  return {
+    id: phrase.id?.startsWith("custom-") ? phrase.id : `custom-${makeId()}`,
+    text: trimSentencePeriod(phrase.text).slice(0, 90),
+    category: categoryOk ? phrase.category : "uncategorized",
+    tone: toneOk ? phrase.tone : "soft",
+    risk: RISK_LABELS[phrase.risk] ? phrase.risk : "safe",
+    note: typeof phrase.note === "string" ? phrase.note.slice(0, 24) : "自定义",
+  };
+}
+
+function normalizeStoredPhrases(phrases) {
+  return Array.isArray(phrases)
+    ? phrases.filter((item) => item && typeof item.text === "string").map(normalizePhrase)
+    : [];
 }
 
 function allPhrases() {
@@ -440,12 +474,12 @@ function renderStats(pool) {
 
 function renderList(pool) {
   if (pool.length === 0) {
-    els.phraseList.innerHTML = `<div class="empty-state">暂时没有匹配句子，换个筛选或添一句。</div>`;
+    els.phraseList.innerHTML = `<div class="empty-state">暂时没有匹配句子，换个筛选或添一句</div>`;
     return;
   }
 
   const items = pool.map((phrase) => {
-    const scene = findOption(CATEGORIES, phrase.category)?.label || "未知场景";
+    const scene = findOption(CATEGORIES, phrase.category)?.label || "未分类";
     const tone = findOption(TONES, phrase.tone)?.label || "未知语气";
     const isFavorite = state.favorites.has(phrase.id);
     const isCustom = phrase.id.startsWith("custom-");
@@ -471,7 +505,10 @@ function renderList(pool) {
         </button>
         ${
           isCustom
-            ? `<button class="tiny-button" type="button" title="删除" aria-label="删除" data-action="delete" data-id="${phrase.id}">
+            ? `<button class="tiny-button" type="button" title="编辑" aria-label="编辑" data-action="edit" data-id="${phrase.id}">
+                <i data-lucide="square-pen" aria-hidden="true"></i>
+              </button>
+              <button class="tiny-button" type="button" title="删除" aria-label="删除" data-action="delete" data-id="${phrase.id}">
                 <i data-lucide="trash-2" aria-hidden="true"></i>
               </button>`
             : ""
@@ -501,13 +538,13 @@ function selectPhrase(id) {
   const phrase = allPhrases().find((item) => item.id === id) || filteredPhrases()[0];
   if (!phrase) {
     state.currentId = null;
-    els.currentQuote.textContent = "这里暂时无句可抽。";
-    els.currentNote.textContent = "换一个筛选条件，或把你的神来之笔收进句库。";
+    els.currentQuote.textContent = "这里暂时无句可抽";
+    els.currentNote.textContent = "换一个筛选条件，或把你的神来之笔收进句库";
     return;
   }
 
   state.currentId = phrase.id;
-  const scene = findOption(CATEGORIES, phrase.category)?.label || "未知场景";
+  const scene = findOption(CATEGORIES, phrase.category)?.label || "未分类";
   const tone = findOption(TONES, phrase.tone)?.label || "未知语气";
   els.currentQuote.textContent = phrase.text;
   els.currentNote.textContent = phrase.note || "原创";
@@ -523,7 +560,7 @@ function pickRandom() {
   const pool = filteredPhrases();
   if (!pool.length) {
     selectPhrase(null);
-    showToast("没有匹配内容，换个条件试试。");
+    showToast("没有匹配内容，换个条件试试");
     return;
   }
 
@@ -550,7 +587,7 @@ async function copyPhrase(phrase) {
     document.execCommand("copy");
     textarea.remove();
   }
-  showToast("已复制，开麦如有神助。");
+  showToast("已复制，开麦如有神助");
 }
 
 function toggleFavorite(id) {
@@ -565,17 +602,215 @@ function toggleFavorite(id) {
 }
 
 function deleteCustom(id) {
-  state.custom = state.custom.filter((phrase) => phrase.id !== id);
+  const phrase = state.custom.find((item) => item.id === id);
+  if (!phrase) return;
+  const confirmed = window.confirm(`删除这句？\n${phrase.text}`);
+  if (!confirmed) return;
+
+  state.custom = state.custom.filter((item) => item.id !== id);
   state.favorites.delete(id);
   writeStorage(STORAGE_KEY, state.custom);
   writeStorage(FAVORITES_KEY, [...state.favorites]);
+  if (state.editingId === id) resetComposer();
   if (state.currentId === id) {
     state.currentId = null;
     pickRandom();
   } else {
     render();
   }
-  showToast("已从本地句库移除。");
+  showToast("已从本地句库移除");
+}
+
+function beginEdit(id) {
+  const phrase = state.custom.find((item) => item.id === id);
+  if (!phrase) return;
+  state.editingId = id;
+  els.phraseText.value = phrase.text;
+  els.phraseCategory.value = phrase.category;
+  els.phraseTone.value = phrase.tone;
+  els.phraseRisk.value = phrase.risk;
+  els.phraseNote.value = phrase.note || "";
+  setPhraseMode("manual");
+  updateComposerState();
+  els.phraseText.focus();
+  els.phraseForm.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function resetComposer() {
+  state.editingId = null;
+  els.phraseForm.reset();
+  setPhraseMode("manual");
+  updateComposerState();
+}
+
+function updateComposerState() {
+  const isEditing = Boolean(state.editingId);
+  els.submitBtn.innerHTML = `<i data-lucide="${isEditing ? "save" : "plus"}" aria-hidden="true"></i>${isEditing ? "保存修改" : "收进句库"}`;
+  els.cancelEditBtn.hidden = !isEditing;
+  renderIcon();
+}
+
+function setPhraseMode(mode) {
+  const radio = document.querySelector(`input[name="phraseMode"][value="${mode}"]`);
+  if (radio) radio.checked = true;
+}
+
+function currentMode() {
+  return els.phraseMode()?.value || "manual";
+}
+
+function scoreByKeywords(text, groups) {
+  return Object.entries(groups).reduce(
+    (best, [key, words]) => {
+      const score = words.reduce((sum, word) => sum + (text.includes(word) ? 1 : 0), 0);
+      return score > best.score ? { key, score } : best;
+    },
+    { key: "uncategorized", score: 0 },
+  );
+}
+
+function inferPhrase(text) {
+  const source = trimSentencePeriod(text);
+  const category = scoreByKeywords(source, {
+    fallen: ["被杀", "击杀", "倒下", "泉水", "复活", "暴毙", "没了", "阵亡", "回家"],
+    counter: ["反杀", "收割", "换掉", "拿下", "归鞘", "血条", "回头", "一刀"],
+    teammate: ["队友", "兄弟", "大家", "我方", "五人", "辅助", "打野", "射手"],
+    objective: ["龙", "暴君", "主宰", "资源", "龙坑", "buff", "红蓝"],
+    lane: ["对线", "兵线", "塔下", "草丛", "压线", "河道", "补刀"],
+    comeback: ["逆风", "翻盘", "不投", "守", "高地", "落后", "东风", "燎原"],
+    ending: ["结算", "散场", "截图", "胜", "败", "结束", "尘埃落定"],
+  });
+  const tone = scoreByKeywords(source, {
+    classic: ["乃", "诸君", "阁下", "春秋", "东风", "山重水复", "韬光养晦", "兵家", "燎原"],
+    abstract: ["充电", "水表", "行为艺术", "问题", "账面", "寄存", "晚饭", "理解"],
+    soft: ["不是", "别慌", "压住情绪", "自嘲", "回泉水", "安慰"],
+    drama: ["此剑", "剧本", "伏笔", "命运", "尘埃", "站起来"],
+    yin: ["阁下", "颇有", "你看", "住太久", "此举", "操作"],
+    hype: ["血条", "志气", "不投", "星火", "燎原", "领先"],
+  });
+  const dangerWords = ["垃圾", "废物", "傻", "蠢", "菜狗", "脑残", "弱智", "nt"];
+  const spicyWords = ["阁下", "颇有", "你看", "行为艺术", "操作", "水表", "住太久"];
+  const risk = dangerWords.some((word) => source.toLowerCase().includes(word))
+    ? "danger"
+    : spicyWords.some((word) => source.includes(word))
+      ? "spicy"
+      : "safe";
+
+  return {
+    category: category.score ? category.key : "uncategorized",
+    tone: tone.score ? tone.key : "soft",
+    risk,
+    note: "智能划分",
+  };
+}
+
+function validateInference(value) {
+  if (!value || typeof value !== "object") return null;
+  const categoryOk = CATEGORIES.some((item) => item.key === value.category && item.key !== "all");
+  const toneOk = TONES.some((item) => item.key === value.tone && item.key !== "all");
+  return {
+    category: categoryOk ? value.category : "uncategorized",
+    tone: toneOk ? value.tone : "soft",
+    risk: RISK_LABELS[value.risk] ? value.risk : "safe",
+    note: typeof value.note === "string" && value.note.trim() ? value.note.trim().slice(0, 24) : "AI 划分",
+  };
+}
+
+async function inferPhraseWithRelay(text) {
+  const endpoint = window.SUNNY_AI_ENDPOINT?.trim();
+  if (!endpoint) return null;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text,
+      categories: CATEGORIES.filter((item) => item.key !== "all").map(({ key, label }) => ({
+        key,
+        label,
+      })),
+      tones: TONES.filter((item) => item.key !== "all").map(({ key, label }) => ({ key, label })),
+      risks: Object.entries(RISK_LABELS).map(([key, label]) => ({ key, label })),
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`AI relay returned ${response.status}`);
+  }
+
+  return validateInference(await response.json());
+}
+
+async function getSmartInference(text) {
+  try {
+    const remote = await inferPhraseWithRelay(text);
+    if (remote) return remote;
+  } catch (error) {
+    console.warn(error);
+    showToast("AI 中转暂不可用，已用本地规则兜底");
+  }
+  return inferPhrase(text);
+}
+
+async function applyInference() {
+  const text = trimSentencePeriod(els.phraseText.value);
+  if (!text) {
+    showToast("先写一句，智能划分才有米下锅");
+    return null;
+  }
+  els.classifyBtn.disabled = true;
+  els.classifyBtn.innerHTML = `<i data-lucide="loader-circle" aria-hidden="true"></i>划分中`;
+  renderIcon();
+  const inferred = await getSmartInference(text);
+  els.phraseText.value = text;
+  els.phraseCategory.value = inferred.category;
+  els.phraseTone.value = inferred.tone;
+  els.phraseRisk.value = inferred.risk;
+  if (!els.phraseNote.value.trim() || ["自定义", "未分类", "智能划分"].includes(els.phraseNote.value.trim())) {
+    els.phraseNote.value = inferred.note;
+  }
+  els.classifyBtn.disabled = false;
+  els.classifyBtn.innerHTML = `<i data-lucide="wand-sparkles" aria-hidden="true"></i>智能划分`;
+  renderIcon();
+  showToast(inferred.note === "AI 划分" ? "AI 已完成划分，可继续微调" : "已按内容智能划分，可继续微调");
+  return inferred;
+}
+
+async function makePhraseFromForm(existingId) {
+  const text = trimSentencePeriod(els.phraseText.value);
+  if (!text) return null;
+
+  const mode = currentMode();
+  let category = els.phraseCategory.value;
+  let tone = els.phraseTone.value;
+  let risk = els.phraseRisk.value;
+  let note = els.phraseNote.value.trim();
+
+  if (mode === "ai") {
+    const inferred = await getSmartInference(text);
+    category = inferred.category;
+    tone = inferred.tone;
+    risk = inferred.risk;
+    note ||= inferred.note;
+  }
+
+  if (mode === "uncategorized") {
+    category = "uncategorized";
+    tone = "soft";
+    risk = "safe";
+    if (!note || ["自定义", "智能划分", "AI 划分"].includes(note)) {
+      note = "未分类";
+    }
+  }
+
+  return {
+    id: existingId || `custom-${makeId()}`,
+    text,
+    category,
+    tone,
+    risk,
+    note: note || "自定义",
+  };
 }
 
 function render() {
@@ -598,7 +833,7 @@ function showToast(message) {
 function exportLibrary() {
   const payload = {
     app: "sunny-phrase-vault",
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     customPhrases: state.custom,
     favorites: [...state.favorites],
@@ -610,64 +845,52 @@ function exportLibrary() {
   anchor.download = "sunny-phrase-vault.json";
   anchor.click();
   URL.revokeObjectURL(url);
-  showToast("句库已导出。");
+  showToast("句库已导出");
 }
 
 async function importLibrary(file) {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    const importedCustom = Array.isArray(payload.customPhrases) ? payload.customPhrases : [];
+    const importedCustom = normalizeStoredPhrases(payload.customPhrases);
     const importedFavorites = Array.isArray(payload.favorites) ? payload.favorites : [];
-    const sanitized = importedCustom
-      .filter((item) => item && typeof item.text === "string")
-      .map((item) => {
-        const categoryOk = CATEGORIES.some((optionItem) => optionItem.key === item.category);
-        const toneOk = TONES.some((optionItem) => optionItem.key === item.tone);
-        return {
-          id: item.id?.startsWith("custom-") ? item.id : `custom-${makeId()}`,
-          text: item.text.slice(0, 90),
-          category: categoryOk && item.category !== "all" ? item.category : "fallen",
-          tone: toneOk && item.tone !== "all" ? item.tone : "soft",
-          risk: RISK_LABELS[item.risk] ? item.risk : "safe",
-          note: typeof item.note === "string" ? item.note.slice(0, 24) : "导入",
-        };
-      });
     const merged = new Map(state.custom.map((item) => [item.id, item]));
-    sanitized.forEach((item) => merged.set(item.id, item));
+    importedCustom.forEach((item) => merged.set(item.id, item));
     state.custom = [...merged.values()];
     state.favorites = new Set([...state.favorites, ...importedFavorites]);
     writeStorage(STORAGE_KEY, state.custom);
     writeStorage(FAVORITES_KEY, [...state.favorites]);
     render();
-    showToast("导入完成，旧雨新知并入句库。");
+    showToast("导入完成，旧雨新知并入句库");
   } catch {
-    showToast("导入失败，请检查 JSON 文件。");
+    showToast("导入失败，请检查 JSON 文件");
   } finally {
     els.importInput.value = "";
   }
 }
 
-function handleFormSubmit(event) {
+async function handleFormSubmit(event) {
   event.preventDefault();
-  const text = els.phraseText.value.trim();
-  if (!text) {
-    showToast("先写一句，方能入库。");
+  els.submitBtn.disabled = true;
+  const phrase = await makePhraseFromForm(state.editingId);
+  if (!phrase) {
+    els.submitBtn.disabled = false;
+    showToast("先写一句，方能入库");
     return;
   }
-  const phrase = {
-    id: `custom-${makeId()}`,
-    text,
-    category: els.phraseCategory.value,
-    tone: els.phraseTone.value,
-    risk: els.phraseRisk.value,
-    note: els.phraseNote.value.trim() || "自定义",
-  };
-  state.custom.unshift(phrase);
+
+  if (state.editingId) {
+    state.custom = state.custom.map((item) => (item.id === state.editingId ? phrase : item));
+    showToast("已保存修改");
+  } else {
+    state.custom.unshift(phrase);
+    showToast("已收进句库");
+  }
+
   writeStorage(STORAGE_KEY, state.custom);
-  els.phraseForm.reset();
+  resetComposer();
   selectPhrase(phrase.id);
-  showToast("已收进句库。");
+  els.submitBtn.disabled = false;
 }
 
 function bindEvents() {
@@ -688,6 +911,7 @@ function bindEvents() {
     if (actionButton.dataset.action === "select") selectPhrase(actionButton.dataset.id);
     if (actionButton.dataset.action === "favorite") toggleFavorite(actionButton.dataset.id);
     if (actionButton.dataset.action === "copy") copyPhrase(phrase);
+    if (actionButton.dataset.action === "edit") beginEdit(actionButton.dataset.id);
     if (actionButton.dataset.action === "delete") deleteCustom(actionButton.dataset.id);
   });
 
@@ -702,10 +926,31 @@ function bindEvents() {
     state.search = event.target.value;
     render();
   });
+  els.classifyBtn.addEventListener("click", () => {
+    applyInference();
+  });
+  els.cancelEditBtn.addEventListener("click", resetComposer);
+  els.phraseText.addEventListener("blur", () => {
+    els.phraseText.value = trimSentencePeriod(els.phraseText.value);
+  });
+  document.querySelectorAll('input[name="phraseMode"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      if (radio.checked && radio.value === "ai") applyInference();
+      if (radio.checked && radio.value === "uncategorized") {
+        els.phraseCategory.value = "uncategorized";
+        els.phraseTone.value = "soft";
+        els.phraseRisk.value = "safe";
+        if (!els.phraseNote.value.trim() || ["自定义", "智能划分", "AI 划分"].includes(els.phraseNote.value.trim())) {
+          els.phraseNote.value = "未分类";
+        }
+      }
+    });
+  });
   els.phraseForm.addEventListener("submit", handleFormSubmit);
 }
 
 renderSelects();
 bindEvents();
 render();
+updateComposerState();
 pickRandom();

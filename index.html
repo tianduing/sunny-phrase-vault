@@ -3,14 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="仅予你的晴天网站，一个用于保存、筛选、随机和复制常用语素材的清新静态网站。"
-    />
+    <meta name="description" content="仅予你的晴天网站，一个用于保存、筛选、随机和复制常用语素材的清新静态网站" />
     <title>仅予你的晴天网站 | 常用语收藏箱</title>
     <link rel="preload" href="./assets/arena-morning.png" as="image" />
     <link rel="stylesheet" href="./styles.css" />
     <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script defer src="./config.js"></script>
     <script defer src="./app.js"></script>
   </head>
   <body>
@@ -59,7 +57,7 @@
         <aside class="control-panel" aria-label="筛选面板">
           <div class="panel-head">
             <h1>晴天语料箱</h1>
-            <p>按场景点亮，按语气收束。</p>
+            <p>按场景点亮，按语气收束</p>
           </div>
 
           <section class="filter-block" aria-labelledby="sceneTitle">
@@ -89,8 +87,8 @@
               <span class="badge" id="currentTone">任意语气</span>
               <span class="badge risk-safe" id="currentRisk">绿色</span>
             </div>
-            <p class="quote-text" id="currentQuote">兵马未动，文案先行。</p>
-            <p class="quote-note" id="currentNote">从左侧选个场景，随机抽一句就能开麦。</p>
+            <p class="quote-text" id="currentQuote">兵马未动，文案先行</p>
+            <p class="quote-note" id="currentNote">从左侧选个场景，随机抽一句就能开麦</p>
 
             <div class="quote-actions">
               <button class="primary-button" id="randomBtn" type="button">
@@ -125,8 +123,24 @@
           <form id="phraseForm" class="phrase-form">
             <label>
               <span>内容</span>
-              <textarea id="phraseText" name="phraseText" rows="3" maxlength="90" placeholder="例如：我不是倒下，是去泉水写战术奏章。"></textarea>
+              <textarea id="phraseText" name="phraseText" rows="3" maxlength="90" placeholder="例如：我不是倒下，是去泉水写战术奏章"></textarea>
             </label>
+
+            <fieldset class="mode-field">
+              <legend>收纳方式</legend>
+              <label>
+                <input type="radio" name="phraseMode" value="manual" checked />
+                <span>手动分类</span>
+              </label>
+              <label>
+                <input type="radio" name="phraseMode" value="ai" />
+                <span>AI 自动划分</span>
+              </label>
+              <label>
+                <input type="radio" name="phraseMode" value="uncategorized" />
+                <span>先放未分类</span>
+              </label>
+            </fieldset>
 
             <div class="form-row">
               <label>
@@ -150,10 +164,20 @@
               </label>
             </div>
 
-            <button class="primary-button full-width" type="submit">
-              <i data-lucide="plus" aria-hidden="true"></i>
-              收进句库
-            </button>
+            <div class="form-actions">
+              <button class="secondary-button" id="classifyBtn" type="button">
+                <i data-lucide="wand-sparkles" aria-hidden="true"></i>
+                智能划分
+              </button>
+              <button class="secondary-button" id="cancelEditBtn" type="button" hidden>
+                <i data-lucide="x" aria-hidden="true"></i>
+                取消编辑
+              </button>
+              <button class="primary-button" id="submitPhraseBtn" type="submit">
+                <i data-lucide="plus" aria-hidden="true"></i>
+                收进句库
+              </button>
+            </div>
           </form>
         </section>
       </div>

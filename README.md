@@ -32,6 +32,8 @@
 
 多设备同步方案见 `DATABASE_PLAN.md`。
 
+AI 自动划分中转方案见 `AI_RELAY.md`。
+
 常见平台配置：
 
 - Vercel：Framework Preset 选 `Other`，Build Command 留空，Output Directory 留空或填 `.`
