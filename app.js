@@ -295,6 +295,7 @@ const SEED_PHRASES = [
 const STORAGE_KEY = "canyon-quip-custom-v1";
 const FAVORITES_KEY = "canyon-quip-favorites-v1";
 const SYNC_KEY = "sunny-phrase-sync-key-v1";
+const DEFAULT_SYNC_KEY = "235126";
 
 const state = {
   category: "all",
@@ -305,7 +306,7 @@ const state = {
   editingId: null,
   custom: normalizeStoredPhrases(readStorage(STORAGE_KEY, [])),
   favorites: new Set(readStorage(FAVORITES_KEY, [])),
-  syncKey: localStorage.getItem(SYNC_KEY) || "",
+  syncKey: localStorage.getItem(SYNC_KEY) || DEFAULT_SYNC_KEY,
 };
 
 const $ = (selector) => document.querySelector(selector);
