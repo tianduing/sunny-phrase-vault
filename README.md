@@ -8,6 +8,7 @@
 - 语气筛选：成语典故、抽象发疯、清新自嘲、台词感、阴阳怪气、热血
 - 一键随机、一键复制、收藏加权
 - 本地新增句子，保存在浏览器 `localStorage`
+- 云同步：输入同一个同步口令，电脑和手机可合并同步自定义句库
 - JSON 导入导出，方便备份和迁移
 - 纯静态文件，可部署到 GitHub Pages、Vercel、Netlify、Cloudflare Pages
 
@@ -30,7 +31,7 @@
 
 更详细的公网部署步骤见 `DEPLOY.md`。
 
-多设备同步方案见 `DATABASE_PLAN.md`。
+多设备同步实现和后续升级方案见 `DATABASE_PLAN.md`。
 
 AI 自动划分中转方案见 `AI_RELAY.md`。
 

@@ -294,6 +294,7 @@ const SEED_PHRASES = [
 
 const STORAGE_KEY = "canyon-quip-custom-v1";
 const FAVORITES_KEY = "canyon-quip-favorites-v1";
+const SYNC_KEY = "sunny-phrase-sync-key-v1";
 
 const state = {
   category: "all",
@@ -304,6 +305,7 @@ const state = {
   editingId: null,
   custom: normalizeStoredPhrases(readStorage(STORAGE_KEY, [])),
   favorites: new Set(readStorage(FAVORITES_KEY, [])),
+  syncKey: localStorage.getItem(SYNC_KEY) || "",
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -334,6 +336,11 @@ const els = {
   classifyBtn: $("#classifyBtn"),
   submitBtn: $("#submitPhraseBtn"),
   cancelEditBtn: $("#cancelEditBtn"),
+  syncCode: $("#syncCode"),
+  syncStatus: $("#syncStatus"),
+  syncNowBtn: $("#syncNowBtn"),
+  pushCloudBtn: $("#pushCloudBtn"),
+  clearSyncBtn: $("#clearSyncBtn"),
   totalCount: $("#totalCount"),
   favoriteCount: $("#favoriteCount"),
   customCount: $("#customCount"),
@@ -354,6 +361,14 @@ function readStorage(key, fallback) {
 
 function writeStorage(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function persistLocal(options = {}) {
+  writeStorage(STORAGE_KEY, state.custom);
+  writeStorage(FAVORITES_KEY, [...state.favorites]);
+  if (options.sync) {
+    queueCloudSave();
+  }
 }
 
 function makeId() {
@@ -597,7 +612,7 @@ function toggleFavorite(id) {
   } else {
     state.favorites.add(id);
   }
-  writeStorage(FAVORITES_KEY, [...state.favorites]);
+  persistLocal({ sync: true });
   render();
 }
 
@@ -609,8 +624,7 @@ function deleteCustom(id) {
 
   state.custom = state.custom.filter((item) => item.id !== id);
   state.favorites.delete(id);
-  writeStorage(STORAGE_KEY, state.custom);
-  writeStorage(FAVORITES_KEY, [...state.favorites]);
+  persistLocal({ sync: true });
   if (state.editingId === id) resetComposer();
   if (state.currentId === id) {
     state.currentId = null;
@@ -717,7 +731,7 @@ function validateInference(value) {
 }
 
 async function inferPhraseWithRelay(text) {
-  const endpoint = window.SUNNY_AI_ENDPOINT?.trim();
+  const endpoint = relayUrl("");
   if (!endpoint) return null;
 
   const response = await fetch(endpoint, {
@@ -739,6 +753,12 @@ async function inferPhraseWithRelay(text) {
   }
 
   return validateInference(await response.json());
+}
+
+function relayUrl(path) {
+  const endpoint = window.SUNNY_AI_ENDPOINT?.trim();
+  if (!endpoint) return "";
+  return `${endpoint.replace(/\/$/, "")}${path}`;
 }
 
 async function getSmartInference(text) {
@@ -830,6 +850,131 @@ function showToast(message) {
   }, 1900);
 }
 
+function setSyncStatus(message) {
+  els.syncStatus.textContent = message;
+}
+
+function normalizeSyncInput() {
+  const value = els.syncCode.value.trim();
+  state.syncKey = value;
+  if (value) {
+    localStorage.setItem(SYNC_KEY, value);
+  } else {
+    localStorage.removeItem(SYNC_KEY);
+  }
+  setSyncStatus(value ? "已保存口令" : "未连接");
+  return value;
+}
+
+function mergePhrases(localPhrases, cloudPhrases) {
+  const merged = new Map();
+  [...cloudPhrases, ...localPhrases].forEach((phrase) => {
+    merged.set(phrase.id, phrase);
+  });
+  return [...merged.values()];
+}
+
+async function loadCloudData(syncKey) {
+  const endpoint = relayUrl("/sync/load");
+  if (!endpoint) throw new Error("Missing relay endpoint");
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ syncKey }),
+  });
+  if (!response.ok) throw new Error(`Sync load failed ${response.status}`);
+  return response.json();
+}
+
+async function saveCloudData(syncKey) {
+  const endpoint = relayUrl("/sync/save");
+  if (!endpoint) throw new Error("Missing relay endpoint");
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      syncKey,
+      customPhrases: state.custom,
+      favorites: [...state.favorites],
+    }),
+  });
+  if (!response.ok) throw new Error(`Sync save failed ${response.status}`);
+  return response.json();
+}
+
+async function syncNow() {
+  const syncKey = normalizeSyncInput();
+  if (syncKey.length < 4) {
+    showToast("同步口令至少 4 个字符");
+    return;
+  }
+  setSyncButtons(true);
+  try {
+    setSyncStatus("同步中");
+    const cloud = await loadCloudData(syncKey);
+    const cloudPhrases = normalizeStoredPhrases(cloud.customPhrases);
+    const cloudFavorites = Array.isArray(cloud.favorites) ? cloud.favorites : [];
+    state.custom = mergePhrases(state.custom, cloudPhrases);
+    state.favorites = new Set([...state.favorites, ...cloudFavorites]);
+    persistLocal();
+    await saveCloudData(syncKey);
+    render();
+    setSyncStatus("已同步");
+    showToast("云端和本地已合并同步");
+  } catch (error) {
+    console.warn(error);
+    setSyncStatus("同步失败");
+    showToast("同步失败，稍后再试");
+  } finally {
+    setSyncButtons(false);
+  }
+}
+
+async function pushCloud() {
+  const syncKey = normalizeSyncInput();
+  if (syncKey.length < 4) {
+    showToast("同步口令至少 4 个字符");
+    return;
+  }
+  setSyncButtons(true);
+  try {
+    setSyncStatus("上传中");
+    await saveCloudData(syncKey);
+    setSyncStatus("已上传");
+    showToast("本地句库已上传云端");
+  } catch (error) {
+    console.warn(error);
+    setSyncStatus("上传失败");
+    showToast("上传失败，稍后再试");
+  } finally {
+    setSyncButtons(false);
+  }
+}
+
+function queueCloudSave() {
+  if (!state.syncKey) return;
+  window.clearTimeout(queueCloudSave.timer);
+  queueCloudSave.timer = window.setTimeout(() => {
+    saveCloudData(state.syncKey)
+      .then(() => setSyncStatus("已自动保存"))
+      .catch(() => setSyncStatus("自动保存失败"));
+  }, 700);
+}
+
+function setSyncButtons(disabled) {
+  els.syncNowBtn.disabled = disabled;
+  els.pushCloudBtn.disabled = disabled;
+  els.clearSyncBtn.disabled = disabled;
+}
+
+function clearSyncKey() {
+  state.syncKey = "";
+  els.syncCode.value = "";
+  localStorage.removeItem(SYNC_KEY);
+  setSyncStatus("未连接");
+  showToast("已清除本机同步口令");
+}
+
 function exportLibrary() {
   const payload = {
     app: "sunny-phrase-vault",
@@ -858,8 +1003,7 @@ async function importLibrary(file) {
     importedCustom.forEach((item) => merged.set(item.id, item));
     state.custom = [...merged.values()];
     state.favorites = new Set([...state.favorites, ...importedFavorites]);
-    writeStorage(STORAGE_KEY, state.custom);
-    writeStorage(FAVORITES_KEY, [...state.favorites]);
+    persistLocal({ sync: true });
     render();
     showToast("导入完成，旧雨新知并入句库");
   } catch {
@@ -887,7 +1031,7 @@ async function handleFormSubmit(event) {
     showToast("已收进句库");
   }
 
-  writeStorage(STORAGE_KEY, state.custom);
+  persistLocal({ sync: true });
   resetComposer();
   selectPhrase(phrase.id);
   els.submitBtn.disabled = false;
@@ -929,6 +1073,10 @@ function bindEvents() {
   els.classifyBtn.addEventListener("click", () => {
     applyInference();
   });
+  els.syncNowBtn.addEventListener("click", syncNow);
+  els.pushCloudBtn.addEventListener("click", pushCloud);
+  els.clearSyncBtn.addEventListener("click", clearSyncKey);
+  els.syncCode.addEventListener("change", normalizeSyncInput);
   els.cancelEditBtn.addEventListener("click", resetComposer);
   els.phraseText.addEventListener("blur", () => {
     els.phraseText.value = trimSentencePeriod(els.phraseText.value);
@@ -953,4 +1101,9 @@ renderSelects();
 bindEvents();
 render();
 updateComposerState();
+els.syncCode.value = state.syncKey;
+setSyncStatus(state.syncKey ? "已保存口令" : "未连接");
+if (state.syncKey) {
+  window.setTimeout(syncNow, 500);
+}
 pickRandom();

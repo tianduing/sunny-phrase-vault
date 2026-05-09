@@ -552,6 +552,44 @@ p {
   padding-top: 14px;
 }
 
+.sync-box {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.sync-heading {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.sync-box label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sync-box input {
+  width: 100%;
+  height: 40px;
+  min-width: 0;
+  padding: 0 10px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  outline: 0;
+}
+
+.sync-actions {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(120px, 0.85fr) minmax(120px, 0.85fr);
+  gap: 10px;
+}
+
 .phrase-form label {
   display: grid;
   gap: 7px;
@@ -627,6 +665,7 @@ p {
 .phrase-form input:focus,
 .phrase-form select:focus,
 .phrase-form textarea:focus,
+.sync-box input:focus,
 .search-field:focus-within {
   border-color: rgba(71, 185, 142, 0.74);
   box-shadow: 0 0 0 3px rgba(71, 185, 142, 0.14);
@@ -793,7 +832,8 @@ p {
   }
 
   .mode-field,
-  .form-actions {
+  .form-actions,
+  .sync-actions {
     grid-template-columns: 1fr;
   }
 }

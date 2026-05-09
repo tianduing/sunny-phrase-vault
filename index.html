@@ -117,7 +117,7 @@
         <section class="composer-panel" aria-labelledby="composerTitle">
           <div class="panel-heading">
             <h2 id="composerTitle">添一句</h2>
-            <span>本地保存</span>
+            <span>本地优先</span>
           </div>
 
           <form id="phraseForm" class="phrase-form">
@@ -179,6 +179,31 @@
               </button>
             </div>
           </form>
+
+          <section class="sync-box" aria-labelledby="syncTitle">
+            <div class="panel-heading sync-heading">
+              <h2 id="syncTitle">云同步</h2>
+              <span id="syncStatus">未连接</span>
+            </div>
+            <label>
+              <span>同步口令</span>
+              <input id="syncCode" type="password" autocomplete="off" placeholder="电脑和手机输入同一个口令" />
+            </label>
+            <div class="sync-actions">
+              <button class="primary-button" id="syncNowBtn" type="button">
+                <i data-lucide="refresh-cw" aria-hidden="true"></i>
+                合并同步
+              </button>
+              <button class="secondary-button" id="pushCloudBtn" type="button">
+                <i data-lucide="cloud-upload" aria-hidden="true"></i>
+                上传本地
+              </button>
+              <button class="secondary-button" id="clearSyncBtn" type="button">
+                <i data-lucide="unlink" aria-hidden="true"></i>
+                清除口令
+              </button>
+            </div>
+          </section>
         </section>
       </div>
     </main>
