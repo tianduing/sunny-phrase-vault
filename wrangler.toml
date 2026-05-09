@@ -1,0 +1,6 @@
+name = "sunny-phrase-ai"
+main = "workers/ai-classify-worker.js"
+compatibility_date = "2026-05-09"
+
+[observability]
+enabled = true
