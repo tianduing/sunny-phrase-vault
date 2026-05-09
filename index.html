@@ -180,59 +180,88 @@
             </div>
           </form>
 
-          <section class="collector-box" aria-labelledby="collectorTitle">
-            <div class="panel-heading collector-heading">
-              <h2 id="collectorTitle">链接采集</h2>
-              <span id="collectorStatus">等待链接</span>
-            </div>
-            <label>
-              <span>文章链接</span>
-              <input id="sourceUrl" type="url" autocomplete="off" placeholder="粘贴公众号或网页文章链接" />
-            </label>
-            <label>
-              <span>候选文案</span>
-              <textarea id="collectedText" rows="5" placeholder="抓到的候选句会出现在这里，可直接识别入库"></textarea>
-            </label>
-            <div class="collector-actions">
-              <button class="primary-button" id="fetchUrlBtn" type="button">
+          <div class="tool-dock" aria-label="辅助工具">
+            <button class="tool-trigger" id="openCollectorBtn" type="button">
+              <span>
                 <i data-lucide="search" aria-hidden="true"></i>
-                抓取文案
-              </button>
-              <button class="secondary-button" id="importCollectedBtn" type="button">
-                <i data-lucide="wand-sparkles" aria-hidden="true"></i>
-                识别入库
-              </button>
-              <button class="secondary-button" id="clearCollectorBtn" type="button">
-                <i data-lucide="eraser" aria-hidden="true"></i>
-                清空
-              </button>
-            </div>
-          </section>
+                链接采集
+              </span>
+              <small id="collectorStatus">等待链接</small>
+            </button>
+            <button class="tool-trigger" id="openSyncBtn" type="button">
+              <span>
+                <i data-lucide="cloud" aria-hidden="true"></i>
+                云同步
+              </span>
+              <small id="syncStatus">未连接</small>
+            </button>
+          </div>
 
-          <section class="sync-box" aria-labelledby="syncTitle">
-            <div class="panel-heading sync-heading">
-              <h2 id="syncTitle">云同步</h2>
-              <span id="syncStatus">未连接</span>
+          <dialog class="tool-dialog" id="collectorDialog" aria-labelledby="collectorTitle">
+            <div class="dialog-card">
+              <div class="dialog-heading">
+                <h2 id="collectorTitle">链接采集</h2>
+                <button class="icon-button dialog-close" id="closeCollectorBtn" type="button" title="关闭" aria-label="关闭链接采集">
+                  <i data-lucide="x" aria-hidden="true"></i>
+                </button>
+              </div>
+              <section class="collector-box">
+                <label>
+                  <span>文章链接</span>
+                  <input id="sourceUrl" type="url" autocomplete="off" placeholder="粘贴公众号或网页文章链接" />
+                </label>
+                <label>
+                  <span>候选文案</span>
+                  <textarea id="collectedText" rows="5" placeholder="抓到的候选句会出现在这里，可直接识别入库"></textarea>
+                </label>
+                <div class="collector-actions">
+                  <button class="primary-button" id="fetchUrlBtn" type="button">
+                    <i data-lucide="search" aria-hidden="true"></i>
+                    抓取文案
+                  </button>
+                  <button class="secondary-button" id="importCollectedBtn" type="button">
+                    <i data-lucide="wand-sparkles" aria-hidden="true"></i>
+                    识别入库
+                  </button>
+                  <button class="secondary-button" id="clearCollectorBtn" type="button">
+                    <i data-lucide="eraser" aria-hidden="true"></i>
+                    清空
+                  </button>
+                </div>
+              </section>
             </div>
-            <label>
-              <span>同步口令</span>
-              <input id="syncCode" type="password" autocomplete="off" placeholder="默认 235126，可自行修改" />
-            </label>
-            <div class="sync-actions">
-              <button class="primary-button" id="syncNowBtn" type="button">
-                <i data-lucide="refresh-cw" aria-hidden="true"></i>
-                合并同步
-              </button>
-              <button class="secondary-button" id="pushCloudBtn" type="button">
-                <i data-lucide="cloud-upload" aria-hidden="true"></i>
-                上传本地
-              </button>
-              <button class="secondary-button" id="clearSyncBtn" type="button">
-                <i data-lucide="unlink" aria-hidden="true"></i>
-                清除口令
-              </button>
+          </dialog>
+
+          <dialog class="tool-dialog" id="syncDialog" aria-labelledby="syncTitle">
+            <div class="dialog-card">
+              <div class="dialog-heading">
+                <h2 id="syncTitle">云同步</h2>
+                <button class="icon-button dialog-close" id="closeSyncBtn" type="button" title="关闭" aria-label="关闭云同步">
+                  <i data-lucide="x" aria-hidden="true"></i>
+                </button>
+              </div>
+              <section class="sync-box">
+                <label>
+                  <span>同步口令</span>
+                  <input id="syncCode" type="password" autocomplete="off" placeholder="默认 235126，可自行修改" />
+                </label>
+                <div class="sync-actions">
+                  <button class="primary-button" id="syncNowBtn" type="button">
+                    <i data-lucide="refresh-cw" aria-hidden="true"></i>
+                    合并同步
+                  </button>
+                  <button class="secondary-button" id="pushCloudBtn" type="button">
+                    <i data-lucide="cloud-upload" aria-hidden="true"></i>
+                    上传本地
+                  </button>
+                  <button class="secondary-button" id="clearSyncBtn" type="button">
+                    <i data-lucide="unlink" aria-hidden="true"></i>
+                    清除口令
+                  </button>
+                </div>
+              </section>
             </div>
-          </section>
+          </dialog>
         </section>
       </div>
     </main>

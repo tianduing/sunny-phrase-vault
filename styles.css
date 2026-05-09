@@ -552,19 +552,95 @@ p {
   padding-top: 14px;
 }
 
-.collector-box,
-.sync-box {
+.tool-dock {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 16px;
   padding-top: 14px;
   border-top: 1px solid var(--line);
 }
 
-.collector-heading,
-.sync-heading {
-  padding-bottom: 0;
-  border-bottom: 0;
+.tool-trigger {
+  display: grid;
+  min-height: 56px;
+  gap: 4px;
+  padding: 10px 12px;
+  color: var(--ink);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  outline: 0;
+}
+
+.tool-trigger:hover {
+  border-color: rgba(71, 185, 142, 0.55);
+  background: #f3fbf7;
+}
+
+.tool-trigger span {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 800;
+}
+
+.tool-trigger small {
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tool-dialog {
+  width: min(680px, calc(100% - 28px));
+  max-height: min(760px, calc(100% - 28px));
+  padding: 0;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  overflow: visible;
+}
+
+.tool-dialog::backdrop {
+  background: rgba(24, 45, 39, 0.26);
+  backdrop-filter: blur(4px);
+}
+
+.dialog-card {
+  display: grid;
+  gap: 14px;
+  max-height: inherit;
+  padding: 18px;
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 24px 60px rgba(24, 61, 55, 0.2);
+}
+
+.dialog-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dialog-heading h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.dialog-close {
+  flex: 0 0 auto;
+}
+
+.collector-box,
+.sync-box {
+  display: grid;
+  gap: 12px;
 }
 
 .collector-box label,
@@ -684,6 +760,7 @@ p {
 .collector-box input:focus,
 .collector-box textarea:focus,
 .sync-box input:focus,
+.tool-trigger:focus-visible,
 .search-field:focus-within {
   border-color: rgba(71, 185, 142, 0.74);
   box-shadow: 0 0 0 3px rgba(71, 185, 142, 0.14);

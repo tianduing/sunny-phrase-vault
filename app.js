@@ -306,6 +306,7 @@ const state = {
   search: "",
   currentId: null,
   editingId: null,
+  collectedPhrases: [],
   custom: normalizeStoredPhrases(readStorage(STORAGE_KEY, [])),
   favorites: new Set(readStorage(FAVORITES_KEY, [])),
   syncKey: localStorage.getItem(SYNC_KEY) || DEFAULT_SYNC_KEY,
@@ -344,6 +345,12 @@ const els = {
   syncNowBtn: $("#syncNowBtn"),
   pushCloudBtn: $("#pushCloudBtn"),
   clearSyncBtn: $("#clearSyncBtn"),
+  openCollectorBtn: $("#openCollectorBtn"),
+  closeCollectorBtn: $("#closeCollectorBtn"),
+  collectorDialog: $("#collectorDialog"),
+  openSyncBtn: $("#openSyncBtn"),
+  closeSyncBtn: $("#closeSyncBtn"),
+  syncDialog: $("#syncDialog"),
   sourceUrl: $("#sourceUrl"),
   collectedText: $("#collectedText"),
   collectorStatus: $("#collectorStatus"),
@@ -817,6 +824,26 @@ function setCollectorButtons(disabled) {
   els.clearCollectorBtn.disabled = disabled;
 }
 
+function openToolDialog(dialog) {
+  if (!dialog.open) {
+    if (dialog.showModal) {
+      dialog.showModal();
+    } else {
+      dialog.setAttribute("open", "");
+    }
+  }
+  renderIcon();
+}
+
+function closeToolDialog(dialog) {
+  if (!dialog.open) return;
+  if (dialog.close) {
+    dialog.close();
+  } else {
+    dialog.removeAttribute("open");
+  }
+}
+
 function normalizeArticleUrl(value) {
   try {
     const url = new URL(String(value || "").trim());
@@ -833,7 +860,15 @@ async function fetchArticleText(url) {
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({
+      url,
+      categories: CATEGORIES.filter((item) => item.key !== "all").map(({ key, label }) => ({
+        key,
+        label,
+      })),
+      tones: TONES.filter((item) => item.key !== "all").map(({ key, label }) => ({ key, label })),
+      risks: Object.entries(RISK_LABELS).map(([key, label]) => ({ key, label })),
+    }),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -887,6 +922,20 @@ function shouldSkipCollectedLine(line) {
     "收起",
     "订阅",
     "搜一搜",
+    "预览时标签不可点",
+    "继续滑动看下一个",
+    "向上滑动看下一个",
+    "使用完整服务",
+    "轻点两下取消赞",
+    "取消赞",
+    "引导切换",
+    "功能提示",
+    "含自贬词",
+    "用迹说明",
+    "公网地址",
+    "多设备",
+    "电脑打开",
+    "手机也能",
   ];
   return noiseWords.some((word) => line.includes(word));
 }
@@ -908,6 +957,51 @@ function extractPhraseCandidates(text) {
   return candidates.slice(0, MAX_COLLECTED_PHRASES);
 }
 
+function normalizeCollectedPhrase(value) {
+  const text = cleanCollectedLine(typeof value === "string" ? value : value?.text);
+  if (shouldSkipCollectedLine(text)) return null;
+  const inferred = typeof value === "object" && value ? validateInference(value) : inferPhrase(text);
+  return {
+    text,
+    category: inferred.category,
+    tone: inferred.tone,
+    risk: inferred.risk,
+    note: inferred.note || "AI 提炼",
+    extractedBy: typeof value === "object" && value?.extractedBy ? value.extractedBy : "ai",
+  };
+}
+
+function normalizeCollectedPhrases(values) {
+  const seen = new Set();
+  return (Array.isArray(values) ? values : [])
+    .map(normalizeCollectedPhrase)
+    .filter((phrase) => {
+      if (!phrase || seen.has(phrase.text)) return false;
+      seen.add(phrase.text);
+      return true;
+    })
+    .slice(0, MAX_COLLECTED_PHRASES);
+}
+
+function setCollectedPhrases(phrases) {
+  state.collectedPhrases = normalizeCollectedPhrases(phrases);
+  els.collectedText.value = state.collectedPhrases.map((phrase) => phrase.text).join("\n");
+  refreshCollectorStatus();
+}
+
+function syncCollectedFromTextarea() {
+  const previous = new Map(state.collectedPhrases.map((phrase) => [phrase.text, phrase]));
+  state.collectedPhrases = extractPhraseCandidates(els.collectedText.value).map(
+    (text) =>
+      previous.get(text) ||
+      normalizeCollectedPhrase({
+        text,
+        ...inferPhrase(text),
+        extractedBy: "manual",
+      }),
+  );
+}
+
 function refreshCollectorStatus() {
   const count = extractPhraseCandidates(els.collectedText.value).length;
   setCollectorStatus(count ? `候选 ${count} 条` : "等待链接");
@@ -922,17 +1016,17 @@ async function collectFromUrl() {
 
   setCollectorButtons(true);
   try {
-    setCollectorStatus("抓取中");
+    setCollectorStatus("AI 提炼中");
     const data = await fetchArticleText(url);
-    const candidates = extractPhraseCandidates(data.text);
-    els.collectedText.value = candidates.join("\n");
-    if (candidates.length) {
-      setCollectorStatus(`抓到 ${candidates.length} 条`);
-      showToast("文案已抓到，可以识别入库");
+    const phrases = normalizeCollectedPhrases(data.phrases || []);
+    setCollectedPhrases(phrases);
+    if (phrases.length) {
+      setCollectorStatus(`AI 提炼 ${phrases.length} 条`);
+      showToast("AI 已提炼候选文案，可以入库");
     } else {
-      els.collectedText.value = String(data.text || "").slice(0, 3000);
-      setCollectorStatus("未提炼出短句");
-      showToast("已抓到正文，但没识别出合适短句");
+      els.collectedText.value = "";
+      setCollectorStatus("未提炼出文案");
+      showToast("AI 没找到适合入库的短句");
     }
   } catch (error) {
     console.warn(error);
@@ -948,14 +1042,15 @@ function delay(ms) {
 }
 
 async function importCollectedPhrases() {
-  const candidates = extractPhraseCandidates(els.collectedText.value);
+  syncCollectedFromTextarea();
+  const candidates = state.collectedPhrases;
   if (!candidates.length) {
     showToast("暂无可入库的候选文案");
     return;
   }
 
   const existingTexts = new Set(allPhrases().map((phrase) => phrase.text));
-  const uniqueCandidates = candidates.filter((text) => !existingTexts.has(text));
+  const uniqueCandidates = candidates.filter((phrase) => !existingTexts.has(phrase.text));
   if (!uniqueCandidates.length) {
     showToast("这些句子已经在库里了");
     setCollectorStatus("没有新句");
@@ -966,13 +1061,14 @@ async function importCollectedPhrases() {
   const additions = [];
   try {
     for (let index = 0; index < uniqueCandidates.length; index += 1) {
-      const text = uniqueCandidates[index];
+      const candidate = uniqueCandidates[index];
       setCollectorStatus(`识别中 ${index + 1}/${uniqueCandidates.length}`);
-      const inferred = await getSmartInference(text, { silent: true });
+      const inferred =
+        candidate.extractedBy === "ai" ? candidate : await getSmartInference(candidate.text, { silent: true });
       additions.push(
         normalizePhrase({
           id: `custom-${makeId()}`,
-          text,
+          text: candidate.text,
           category: inferred.category,
           tone: inferred.tone,
           risk: inferred.risk,
@@ -996,6 +1092,7 @@ async function importCollectedPhrases() {
 function clearCollector() {
   els.sourceUrl.value = "";
   els.collectedText.value = "";
+  state.collectedPhrases = [];
   setCollectorStatus("等待链接");
 }
 
@@ -1280,10 +1377,23 @@ function bindEvents() {
   els.pushCloudBtn.addEventListener("click", pushCloud);
   els.clearSyncBtn.addEventListener("click", clearSyncKey);
   els.syncCode.addEventListener("change", normalizeSyncInput);
+  els.openCollectorBtn.addEventListener("click", () => openToolDialog(els.collectorDialog));
+  els.closeCollectorBtn.addEventListener("click", () => closeToolDialog(els.collectorDialog));
+  els.collectorDialog.addEventListener("click", (event) => {
+    if (event.target === els.collectorDialog) closeToolDialog(els.collectorDialog);
+  });
+  els.openSyncBtn.addEventListener("click", () => openToolDialog(els.syncDialog));
+  els.closeSyncBtn.addEventListener("click", () => closeToolDialog(els.syncDialog));
+  els.syncDialog.addEventListener("click", (event) => {
+    if (event.target === els.syncDialog) closeToolDialog(els.syncDialog);
+  });
   els.fetchUrlBtn.addEventListener("click", collectFromUrl);
   els.importCollectedBtn.addEventListener("click", importCollectedPhrases);
   els.clearCollectorBtn.addEventListener("click", clearCollector);
-  els.collectedText.addEventListener("input", refreshCollectorStatus);
+  els.collectedText.addEventListener("input", () => {
+    syncCollectedFromTextarea();
+    refreshCollectorStatus();
+  });
   els.cancelEditBtn.addEventListener("click", resetComposer);
   els.phraseText.addEventListener("blur", () => {
     els.phraseText.value = trimSentencePeriod(els.phraseText.value);
