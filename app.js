@@ -296,6 +296,8 @@ const STORAGE_KEY = "canyon-quip-custom-v1";
 const FAVORITES_KEY = "canyon-quip-favorites-v1";
 const SYNC_KEY = "sunny-phrase-sync-key-v1";
 const DEFAULT_SYNC_KEY = "235126";
+const MAX_COLLECTED_PHRASES = 40;
+const MIN_COLLECTED_LENGTH = 6;
 
 const state = {
   category: "all",
@@ -342,6 +344,12 @@ const els = {
   syncNowBtn: $("#syncNowBtn"),
   pushCloudBtn: $("#pushCloudBtn"),
   clearSyncBtn: $("#clearSyncBtn"),
+  sourceUrl: $("#sourceUrl"),
+  collectedText: $("#collectedText"),
+  collectorStatus: $("#collectorStatus"),
+  fetchUrlBtn: $("#fetchUrlBtn"),
+  importCollectedBtn: $("#importCollectedBtn"),
+  clearCollectorBtn: $("#clearCollectorBtn"),
   totalCount: $("#totalCount"),
   favoriteCount: $("#favoriteCount"),
   customCount: $("#customCount"),
@@ -762,13 +770,15 @@ function relayUrl(path) {
   return `${endpoint.replace(/\/$/, "")}${path}`;
 }
 
-async function getSmartInference(text) {
+async function getSmartInference(text, options = {}) {
   try {
     const remote = await inferPhraseWithRelay(text);
     if (remote) return remote;
   } catch (error) {
     console.warn(error);
-    showToast("AI 中转暂不可用，已用本地规则兜底");
+    if (!options.silent) {
+      showToast("AI 中转暂不可用，已用本地规则兜底");
+    }
   }
   return inferPhrase(text);
 }
@@ -795,6 +805,198 @@ async function applyInference() {
   renderIcon();
   showToast(inferred.note === "AI 划分" ? "AI 已完成划分，可继续微调" : "已按内容智能划分，可继续微调");
   return inferred;
+}
+
+function setCollectorStatus(message) {
+  els.collectorStatus.textContent = message;
+}
+
+function setCollectorButtons(disabled) {
+  els.fetchUrlBtn.disabled = disabled;
+  els.importCollectedBtn.disabled = disabled;
+  els.clearCollectorBtn.disabled = disabled;
+}
+
+function normalizeArticleUrl(value) {
+  try {
+    const url = new URL(String(value || "").trim());
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+async function fetchArticleText(url) {
+  const endpoint = relayUrl("/collect/url");
+  if (!endpoint) throw new Error("Missing relay endpoint");
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || `Collect failed ${response.status}`);
+  }
+  return data;
+}
+
+function cleanCollectedLine(line) {
+  return trimSentencePeriod(
+    String(line || "")
+      .replace(/https?:\/\/\S+/gi, "")
+      .replace(/^[\s>*#\-–—·•●◆◇★☆]+/, "")
+      .replace(/^\d{1,3}[、.)）]\s*/, "")
+      .replace(/^[一二三四五六七八九十百]+[、.)）]\s*/, "")
+      .replace(/[，,、；;：:！!？?~～…]+$/g, "")
+      .replace(/\s+/g, " "),
+  );
+}
+
+function shouldSkipCollectedLine(line) {
+  if (!line || line.length < MIN_COLLECTED_LENGTH || line.length > 90) return true;
+  if (!/[\u4e00-\u9fa5]/.test(line)) return true;
+  if (/^[\d\s:：.,，、-]+$/.test(line)) return true;
+  const noiseWords = [
+    "阅读全文",
+    "阅读原文",
+    "点击",
+    "关注",
+    "公众号",
+    "微信",
+    "作者",
+    "来源",
+    "声明",
+    "广告",
+    "二维码",
+    "扫码",
+    "图片",
+    "视频",
+    "播放",
+    "菜单",
+    "投诉",
+    "在看",
+    "转发",
+    "分享",
+    "复制链接",
+    "留言",
+    "评论",
+    "发布于",
+    "展开",
+    "收起",
+    "订阅",
+    "搜一搜",
+  ];
+  return noiseWords.some((word) => line.includes(word));
+}
+
+function extractPhraseCandidates(text) {
+  const seen = new Set();
+  const candidates = [];
+  String(text || "")
+    .replace(/\r/g, "\n")
+    .replace(/[|｜]/g, "\n")
+    .replace(/[“”"‘’《》]/g, "")
+    .split(/\n|[。！？!?；;]+/)
+    .forEach((part) => {
+      const line = cleanCollectedLine(part);
+      if (shouldSkipCollectedLine(line) || seen.has(line)) return;
+      seen.add(line);
+      candidates.push(line);
+    });
+  return candidates.slice(0, MAX_COLLECTED_PHRASES);
+}
+
+function refreshCollectorStatus() {
+  const count = extractPhraseCandidates(els.collectedText.value).length;
+  setCollectorStatus(count ? `候选 ${count} 条` : "等待链接");
+}
+
+async function collectFromUrl() {
+  const url = normalizeArticleUrl(els.sourceUrl.value);
+  if (!url) {
+    showToast("先粘贴一个公开文章链接");
+    return;
+  }
+
+  setCollectorButtons(true);
+  try {
+    setCollectorStatus("抓取中");
+    const data = await fetchArticleText(url);
+    const candidates = extractPhraseCandidates(data.text);
+    els.collectedText.value = candidates.join("\n");
+    if (candidates.length) {
+      setCollectorStatus(`抓到 ${candidates.length} 条`);
+      showToast("文案已抓到，可以识别入库");
+    } else {
+      els.collectedText.value = String(data.text || "").slice(0, 3000);
+      setCollectorStatus("未提炼出短句");
+      showToast("已抓到正文，但没识别出合适短句");
+    }
+  } catch (error) {
+    console.warn(error);
+    setCollectorStatus("抓取失败");
+    showToast("抓取失败，可能是链接不公开或源站拦截");
+  } finally {
+    setCollectorButtons(false);
+  }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function importCollectedPhrases() {
+  const candidates = extractPhraseCandidates(els.collectedText.value);
+  if (!candidates.length) {
+    showToast("暂无可入库的候选文案");
+    return;
+  }
+
+  const existingTexts = new Set(allPhrases().map((phrase) => phrase.text));
+  const uniqueCandidates = candidates.filter((text) => !existingTexts.has(text));
+  if (!uniqueCandidates.length) {
+    showToast("这些句子已经在库里了");
+    setCollectorStatus("没有新句");
+    return;
+  }
+
+  setCollectorButtons(true);
+  const additions = [];
+  try {
+    for (let index = 0; index < uniqueCandidates.length; index += 1) {
+      const text = uniqueCandidates[index];
+      setCollectorStatus(`识别中 ${index + 1}/${uniqueCandidates.length}`);
+      const inferred = await getSmartInference(text, { silent: true });
+      additions.push(
+        normalizePhrase({
+          id: `custom-${makeId()}`,
+          text,
+          category: inferred.category,
+          tone: inferred.tone,
+          risk: inferred.risk,
+          note: inferred.note || "采集",
+        }),
+      );
+      await delay(80);
+    }
+
+    state.custom = [...additions, ...state.custom];
+    persistLocal({ sync: true });
+    render();
+    selectPhrase(additions[0].id);
+    setCollectorStatus(`已入库 ${additions.length} 条`);
+    showToast(`已自动识别并收进 ${additions.length} 条`);
+  } finally {
+    setCollectorButtons(false);
+  }
+}
+
+function clearCollector() {
+  els.sourceUrl.value = "";
+  els.collectedText.value = "";
+  setCollectorStatus("等待链接");
 }
 
 async function makePhraseFromForm(existingId) {
@@ -1078,6 +1280,10 @@ function bindEvents() {
   els.pushCloudBtn.addEventListener("click", pushCloud);
   els.clearSyncBtn.addEventListener("click", clearSyncKey);
   els.syncCode.addEventListener("change", normalizeSyncInput);
+  els.fetchUrlBtn.addEventListener("click", collectFromUrl);
+  els.importCollectedBtn.addEventListener("click", importCollectedPhrases);
+  els.clearCollectorBtn.addEventListener("click", clearCollector);
+  els.collectedText.addEventListener("input", refreshCollectorStatus);
   els.cancelEditBtn.addEventListener("click", resetComposer);
   els.phraseText.addEventListener("blur", () => {
     els.phraseText.value = trimSentencePeriod(els.phraseText.value);
@@ -1102,6 +1308,7 @@ renderSelects();
 bindEvents();
 render();
 updateComposerState();
+refreshCollectorStatus();
 els.syncCode.value = state.syncKey;
 setSyncStatus(state.syncKey ? "已保存口令" : "未连接");
 if (state.syncKey) {

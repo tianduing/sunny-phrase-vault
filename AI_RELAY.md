@@ -26,5 +26,6 @@ window.SUNNY_AI_ENDPOINT = "https://sunny-ai-classify.xxx.workers.dev/classify";
 
 - 配了 `SUNNY_AI_ENDPOINT`：优先调用中转 AI 分类。
 - 没配或接口失败：自动用本地规则兜底。
+- 链接采集会调用同一个 Worker 的 `/collect/url`，只抓公开 `http/https` 文章链接，并拦截本机、内网等地址。
 
 这样即使 AI 服务临时不可用，网站也不会罢工。

@@ -3,6 +3,8 @@ const DEFAULT_MODEL = "gpt-5.4";
 const SYNC_PREFIX = "vault:";
 const MAX_PHRASES = 500;
 const MAX_FAVORITES = 1000;
+const MAX_HTML_LENGTH = 500000;
+const MAX_COLLECT_TEXT = 60000;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,6 +35,9 @@ export default {
     }
     if (url.pathname === "/sync/save") {
       return saveSync(payload, env);
+    }
+    if (url.pathname === "/collect/url") {
+      return collectUrl(payload);
     }
 
     return classifyPhrase(payload, env);
@@ -157,6 +162,50 @@ async function saveSync(payload, env) {
   return json(body);
 }
 
+async function collectUrl(payload) {
+  const target = normalizeTargetUrl(payload.url);
+  if (!target.ok) {
+    return json({ error: target.error }, 400);
+  }
+
+  let upstream;
+  try {
+    upstream = await fetch(target.href, {
+      redirect: "follow",
+      headers: {
+        Accept: "text/html,text/plain;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36",
+      },
+    });
+  } catch {
+    return json({ error: "Source fetch failed" }, 502);
+  }
+
+  if (!upstream.ok) {
+    return json({ error: `Source returned ${upstream.status}` }, 502);
+  }
+
+  const contentType = upstream.headers.get("content-type") || "";
+  if (!/text\/html|text\/plain|application\/xhtml\+xml/i.test(contentType)) {
+    return json({ error: "Source is not a readable article" }, 415);
+  }
+
+  const html = (await upstream.text()).slice(0, MAX_HTML_LENGTH);
+  const title = extractTitle(html);
+  const text = extractReadableText(html).slice(0, MAX_COLLECT_TEXT);
+  if (!text) {
+    return json({ error: "No readable text found" }, 422);
+  }
+
+  return json({
+    title,
+    text,
+    url: target.href,
+  });
+}
+
 function assertStore(env) {
   if (!env.SUNNY_SYNC) {
     return {
@@ -165,6 +214,49 @@ function assertStore(env) {
     };
   }
   return { ok: true };
+}
+
+function normalizeTargetUrl(value) {
+  try {
+    const url = new URL(String(value || "").trim());
+    if (!["http:", "https:"].includes(url.protocol)) {
+      return { ok: false, error: "Only http(s) article URLs are supported" };
+    }
+    if (isBlockedHost(url.hostname)) {
+      return { ok: false, error: "Private or local URLs are not supported" };
+    }
+    url.hash = "";
+    return { ok: true, href: url.href };
+  } catch {
+    return { ok: false, error: "Invalid article URL" };
+  }
+}
+
+function isBlockedHost(hostname) {
+  const host = String(hostname || "")
+    .trim()
+    .replace(/^\[/, "")
+    .replace(/\]$/, "")
+    .toLowerCase();
+  if (!host || host === "localhost" || host.endsWith(".local")) return true;
+  if (host.includes(":")) return true;
+
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!ipv4) return false;
+
+  const parts = ipv4.slice(1).map(Number);
+  if (parts.some((part) => part < 0 || part > 255)) return true;
+  const [a, b] = parts;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    a >= 224
+  );
 }
 
 function normalizeSyncKey(syncKey) {
@@ -206,6 +298,69 @@ function extractOutputText(data) {
   const content = data.output?.flatMap((item) => item.content || []) || [];
   const textPart = content.find((item) => typeof item.text === "string");
   return textPart?.text || "";
+}
+
+function extractTitle(html) {
+  const og =
+    html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["'][^>]*>/i) ||
+    html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["'][^>]*>/i);
+  const title = og?.[1] || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "";
+  return decodeHtmlEntities(stripTags(title)).trim().slice(0, 120);
+}
+
+function extractReadableText(html) {
+  const source = pickArticleHtml(html)
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript\b[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<svg\b[\s\S]*?<\/svg>/gi, " ")
+    .replace(/<(br|hr)\b[^>]*>/gi, "\n")
+    .replace(/<\/(p|div|section|article|li|h[1-6]|blockquote|tr)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ");
+
+  return decodeHtmlEntities(source)
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+function pickArticleHtml(html) {
+  const wechatStart = html.search(/<[^>]+id=["']js_content["'][^>]*>/i);
+  if (wechatStart >= 0) {
+    return html.slice(wechatStart);
+  }
+  const article = html.match(/<article\b[\s\S]*?<\/article>/i)?.[0];
+  if (article) return article;
+  const main = html.match(/<main\b[\s\S]*?<\/main>/i)?.[0];
+  if (main) return main;
+  return html.match(/<body\b[\s\S]*?<\/body>/i)?.[0] || html;
+}
+
+function stripTags(value) {
+  return String(value || "").replace(/<[^>]+>/g, " ");
+}
+
+function decodeHtmlEntities(value) {
+  const named = {
+    amp: "&",
+    apos: "'",
+    gt: ">",
+    hellip: "…",
+    ldquo: "“",
+    lsquo: "‘",
+    lt: "<",
+    mdash: "-",
+    nbsp: " ",
+    quot: '"',
+    rdquo: "”",
+    rsquo: "’",
+  };
+  return String(value || "")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+    .replace(/&([a-z]+);/gi, (match, key) => named[key.toLowerCase()] ?? match);
 }
 
 function json(body, status = 200) {

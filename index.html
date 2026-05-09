@@ -180,6 +180,35 @@
             </div>
           </form>
 
+          <section class="collector-box" aria-labelledby="collectorTitle">
+            <div class="panel-heading collector-heading">
+              <h2 id="collectorTitle">链接采集</h2>
+              <span id="collectorStatus">等待链接</span>
+            </div>
+            <label>
+              <span>文章链接</span>
+              <input id="sourceUrl" type="url" autocomplete="off" placeholder="粘贴公众号或网页文章链接" />
+            </label>
+            <label>
+              <span>候选文案</span>
+              <textarea id="collectedText" rows="5" placeholder="抓到的候选句会出现在这里，可直接识别入库"></textarea>
+            </label>
+            <div class="collector-actions">
+              <button class="primary-button" id="fetchUrlBtn" type="button">
+                <i data-lucide="search" aria-hidden="true"></i>
+                抓取文案
+              </button>
+              <button class="secondary-button" id="importCollectedBtn" type="button">
+                <i data-lucide="wand-sparkles" aria-hidden="true"></i>
+                识别入库
+              </button>
+              <button class="secondary-button" id="clearCollectorBtn" type="button">
+                <i data-lucide="eraser" aria-hidden="true"></i>
+                清空
+              </button>
+            </div>
+          </section>
+
           <section class="sync-box" aria-labelledby="syncTitle">
             <div class="panel-heading sync-heading">
               <h2 id="syncTitle">云同步</h2>

@@ -552,6 +552,7 @@ p {
   padding-top: 14px;
 }
 
+.collector-box,
 .sync-box {
   display: grid;
   gap: 12px;
@@ -560,11 +561,13 @@ p {
   border-top: 1px solid var(--line);
 }
 
+.collector-heading,
 .sync-heading {
   padding-bottom: 0;
   border-bottom: 0;
 }
 
+.collector-box label,
 .sync-box label {
   display: grid;
   gap: 7px;
@@ -572,11 +575,11 @@ p {
   font-size: 13px;
 }
 
+.collector-box input,
+.collector-box textarea,
 .sync-box input {
   width: 100%;
-  height: 40px;
   min-width: 0;
-  padding: 0 10px;
   color: var(--ink);
   background: rgba(255, 255, 255, 0.86);
   border: 1px solid var(--line);
@@ -584,6 +587,19 @@ p {
   outline: 0;
 }
 
+.collector-box input,
+.sync-box input {
+  height: 40px;
+  padding: 0 10px;
+}
+
+.collector-box textarea {
+  min-height: 116px;
+  padding: 10px;
+  resize: vertical;
+}
+
+.collector-actions,
 .sync-actions {
   display: grid;
   grid-template-columns: minmax(140px, 1fr) minmax(120px, 0.85fr) minmax(120px, 0.85fr);
@@ -665,6 +681,8 @@ p {
 .phrase-form input:focus,
 .phrase-form select:focus,
 .phrase-form textarea:focus,
+.collector-box input:focus,
+.collector-box textarea:focus,
 .sync-box input:focus,
 .search-field:focus-within {
   border-color: rgba(71, 185, 142, 0.74);
@@ -833,6 +851,7 @@ p {
 
   .mode-field,
   .form-actions,
+  .collector-actions,
   .sync-actions {
     grid-template-columns: 1fr;
   }
