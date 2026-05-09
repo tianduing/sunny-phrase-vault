@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="仅予你的晴天网站，一个用于保存、筛选、随机和复制常用语素材的清新静态网站。"
+    />
+    <title>仅予你的晴天网站 | 常用语收藏箱</title>
+    <link rel="preload" href="./assets/arena-morning.png" as="image" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar" aria-label="主导航">
+        <a class="brand" href="./" aria-label="仅予你的晴天网站首页">
+          <span class="brand-mark">晴</span>
+          <span class="brand-copy">
+            <strong>仅予你的晴天网站</strong>
+            <small>常用语收藏箱</small>
+          </span>
+        </a>
+
+        <label class="search-field" for="searchInput">
+          <i data-lucide="search" aria-hidden="true"></i>
+          <input id="searchInput" type="search" placeholder="搜场景、梗、成语..." autocomplete="off" />
+        </label>
+
+        <div class="top-actions">
+          <button class="icon-button" id="exportBtn" type="button" title="导出句库" aria-label="导出句库">
+            <i data-lucide="download" aria-hidden="true"></i>
+          </button>
+          <label class="icon-button file-button" title="导入句库" aria-label="导入句库">
+            <i data-lucide="upload" aria-hidden="true"></i>
+            <input id="importInput" type="file" accept="application/json" />
+          </label>
+        </div>
+      </header>
+
+      <section class="summary-strip" aria-label="句库概览">
+        <article>
+          <span id="totalCount">0</span>
+          <small>总句数</small>
+        </article>
+        <article>
+          <span id="favoriteCount">0</span>
+          <small>收藏</small>
+        </article>
+        <article>
+          <span id="customCount">0</span>
+          <small>自定义</small>
+        </article>
+      </section>
+
+      <div class="workspace">
+        <aside class="control-panel" aria-label="筛选面板">
+          <div class="panel-head">
+            <h1>晴天语料箱</h1>
+            <p>按场景点亮，按语气收束。</p>
+          </div>
+
+          <section class="filter-block" aria-labelledby="sceneTitle">
+            <h2 id="sceneTitle">场景</h2>
+            <div class="chip-grid" id="categoryTabs"></div>
+          </section>
+
+          <section class="filter-block" aria-labelledby="toneTitle">
+            <h2 id="toneTitle">语气</h2>
+            <div class="chip-grid compact" id="toneTabs"></div>
+          </section>
+
+          <section class="filter-block" aria-labelledby="riskTitle">
+            <h2 id="riskTitle">火力</h2>
+            <div class="chip-grid compact" id="riskTabs"></div>
+          </section>
+        </aside>
+
+        <section class="stage" aria-label="当前推荐">
+          <figure class="arena-visual">
+            <img src="./assets/arena-morning.png" alt="清晨峡谷风格的抽象竞技场插画" />
+          </figure>
+
+          <article class="quote-board">
+            <div class="quote-meta">
+              <span class="badge" id="currentCategory">全部场景</span>
+              <span class="badge" id="currentTone">任意语气</span>
+              <span class="badge risk-safe" id="currentRisk">绿色</span>
+            </div>
+            <p class="quote-text" id="currentQuote">兵马未动，文案先行。</p>
+            <p class="quote-note" id="currentNote">从左侧选个场景，随机抽一句就能开麦。</p>
+
+            <div class="quote-actions">
+              <button class="primary-button" id="randomBtn" type="button">
+                <i data-lucide="shuffle" aria-hidden="true"></i>
+                随机一句
+              </button>
+              <button class="secondary-button" id="copyBtn" type="button">
+                <i data-lucide="copy" aria-hidden="true"></i>
+                复制
+              </button>
+              <button class="icon-button board-star" id="favoriteBtn" type="button" title="收藏当前句子" aria-label="收藏当前句子">
+                <i data-lucide="star" aria-hidden="true"></i>
+              </button>
+            </div>
+          </article>
+        </section>
+
+        <aside class="library-panel" aria-label="句库列表">
+          <div class="panel-heading">
+            <h2>句库</h2>
+            <span id="visibleCount">0 条</span>
+          </div>
+          <div class="phrase-list" id="phraseList"></div>
+        </aside>
+
+        <section class="composer-panel" aria-labelledby="composerTitle">
+          <div class="panel-heading">
+            <h2 id="composerTitle">添一句</h2>
+            <span>本地保存</span>
+          </div>
+
+          <form id="phraseForm" class="phrase-form">
+            <label>
+              <span>内容</span>
+              <textarea id="phraseText" name="phraseText" rows="3" maxlength="90" placeholder="例如：我不是倒下，是去泉水写战术奏章。"></textarea>
+            </label>
+
+            <div class="form-row">
+              <label>
+                <span>场景</span>
+                <select id="phraseCategory" name="phraseCategory"></select>
+              </label>
+              <label>
+                <span>语气</span>
+                <select id="phraseTone" name="phraseTone"></select>
+              </label>
+            </div>
+
+            <div class="form-row">
+              <label>
+                <span>火力</span>
+                <select id="phraseRisk" name="phraseRisk"></select>
+              </label>
+              <label>
+                <span>备注</span>
+                <input id="phraseNote" name="phraseNote" type="text" maxlength="24" placeholder="原创、成语改写、梗感..." />
+              </label>
+            </div>
+
+            <button class="primary-button full-width" type="submit">
+              <i data-lucide="plus" aria-hidden="true"></i>
+              收进句库
+            </button>
+          </form>
+        </section>
+      </div>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
