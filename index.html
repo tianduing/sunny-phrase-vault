@@ -252,6 +252,46 @@
             </button>
           </div>
 
+          <section class="tool-section collector-panel" id="collectorPanel" aria-labelledby="collectorTitle" hidden>
+            <div class="section-heading">
+              <h3 id="collectorTitle">链接采集</h3>
+              <span id="collectorStage">等待开始</span>
+            </div>
+            <section class="collector-box">
+              <div class="collector-progress" id="collectorProgress" aria-live="polite">
+                <div class="progress-row">
+                  <span>抓取进度</span>
+                  <strong id="collectorPercent">0%</strong>
+                </div>
+                <div class="progress-track" aria-hidden="true">
+                  <span id="collectorBar"></span>
+                </div>
+              </div>
+              <label>
+                <span>文章链接</span>
+                <input id="sourceUrl" type="url" autocomplete="off" placeholder="粘贴公众号或网页文章链接" />
+              </label>
+              <label>
+                <span>候选文案</span>
+                <textarea id="collectedText" rows="5" placeholder="抓到的候选句会出现在这里，可直接识别入库"></textarea>
+              </label>
+              <div class="collector-actions">
+                <button class="primary-button" id="fetchUrlBtn" type="button">
+                  <i data-lucide="search" aria-hidden="true"></i>
+                  抓取文案
+                </button>
+                <button class="secondary-button" id="importCollectedBtn" type="button">
+                  <i data-lucide="wand-sparkles" aria-hidden="true"></i>
+                  识别入库
+                </button>
+                <button class="secondary-button" id="clearCollectorBtn" type="button">
+                  <i data-lucide="eraser" aria-hidden="true"></i>
+                  清空
+                </button>
+              </div>
+            </section>
+          </section>
+
           <section class="tool-section" aria-labelledby="importPreviewTitle">
             <div class="section-heading">
               <h3 id="importPreviewTitle">导入预览</h3>
@@ -285,41 +325,6 @@
               </button>
             </div>
           </section>
-
-          <dialog class="tool-dialog" id="collectorDialog" aria-labelledby="collectorTitle">
-            <div class="dialog-card">
-              <div class="dialog-heading">
-                <h2 id="collectorTitle">链接采集</h2>
-                <button class="icon-button dialog-close" id="closeCollectorBtn" type="button" title="关闭" aria-label="关闭链接采集">
-                  <i data-lucide="x" aria-hidden="true"></i>
-                </button>
-              </div>
-              <section class="collector-box">
-                <label>
-                  <span>文章链接</span>
-                  <input id="sourceUrl" type="url" autocomplete="off" placeholder="粘贴公众号或网页文章链接" />
-                </label>
-                <label>
-                  <span>候选文案</span>
-                  <textarea id="collectedText" rows="5" placeholder="抓到的候选句会出现在这里，可直接识别入库"></textarea>
-                </label>
-                <div class="collector-actions">
-                  <button class="primary-button" id="fetchUrlBtn" type="button">
-                    <i data-lucide="search" aria-hidden="true"></i>
-                    抓取文案
-                  </button>
-                  <button class="secondary-button" id="importCollectedBtn" type="button">
-                    <i data-lucide="wand-sparkles" aria-hidden="true"></i>
-                    识别入库
-                  </button>
-                  <button class="secondary-button" id="clearCollectorBtn" type="button">
-                    <i data-lucide="eraser" aria-hidden="true"></i>
-                    清空
-                  </button>
-                </div>
-              </section>
-            </div>
-          </dialog>
 
           <dialog class="tool-dialog" id="syncDialog" aria-labelledby="syncTitle">
             <div class="dialog-card">

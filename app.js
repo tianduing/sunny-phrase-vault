@@ -318,6 +318,9 @@ const state = {
   syncKey: localStorage.getItem(SYNC_KEY) || DEFAULT_SYNC_KEY,
 };
 
+let collectorProgressTimer = 0;
+let collectorAbortController = null;
+
 const $ = (selector) => document.querySelector(selector);
 
 const els = {
@@ -356,8 +359,10 @@ const els = {
   pushCloudBtn: $("#pushCloudBtn"),
   clearSyncBtn: $("#clearSyncBtn"),
   openCollectorBtn: $("#openCollectorBtn"),
-  closeCollectorBtn: $("#closeCollectorBtn"),
-  collectorDialog: $("#collectorDialog"),
+  collectorPanel: $("#collectorPanel"),
+  collectorStage: $("#collectorStage"),
+  collectorPercent: $("#collectorPercent"),
+  collectorBar: $("#collectorBar"),
   openSyncBtn: $("#openSyncBtn"),
   closeSyncBtn: $("#closeSyncBtn"),
   syncDialog: $("#syncDialog"),
@@ -1133,10 +1138,43 @@ function setCollectorStatus(message) {
   els.collectorStatus.textContent = message;
 }
 
-function setCollectorButtons(disabled) {
+function setCollectorProgress(stage, percent, status = stage) {
+  const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
+  els.collectorStage.textContent = stage;
+  els.collectorPercent.textContent = `${safePercent}%`;
+  els.collectorBar.style.width = `${safePercent}%`;
+  els.collectorPanel.classList.toggle("is-working", safePercent > 0 && safePercent < 100);
+  els.collectorPanel.classList.toggle("is-done", safePercent === 100);
+  if (status) setCollectorStatus(status);
+}
+
+function stopCollectorProgressTimer() {
+  if (!collectorProgressTimer) return;
+  window.clearInterval(collectorProgressTimer);
+  collectorProgressTimer = 0;
+}
+
+function startCollectorProgressTimer(stage, start = 30, limit = 88) {
+  stopCollectorProgressTimer();
+  let progress = start;
+  setCollectorProgress(stage, progress);
+  collectorProgressTimer = window.setInterval(() => {
+    progress = Math.min(limit, progress + Math.max(1, (limit - progress) * 0.18));
+    setCollectorProgress(stage, progress);
+  }, 700);
+}
+
+function setCollectorButtons(disabled, options = {}) {
   els.fetchUrlBtn.disabled = disabled;
   els.importCollectedBtn.disabled = disabled;
-  els.clearCollectorBtn.disabled = disabled;
+  els.clearCollectorBtn.disabled = disabled && !options.allowClear;
+}
+
+function focusCollectorPanel() {
+  setView("tools");
+  els.collectorPanel.hidden = false;
+  els.collectorPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.setTimeout(() => els.sourceUrl.focus({ preventScroll: true }), 220);
 }
 
 function openToolDialog(dialog) {
@@ -1168,13 +1206,14 @@ function normalizeArticleUrl(value) {
   }
 }
 
-async function fetchArticleText(url) {
+async function fetchArticleText(url, signal) {
   const endpoint = relayUrl("/collect/url");
   if (!endpoint) throw new Error("Missing relay endpoint");
 
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal,
     body: JSON.stringify({
       url,
       categories: CATEGORIES.filter((item) => item.key !== "all").map(({ key, label }) => ({
@@ -1319,35 +1358,53 @@ function syncCollectedFromTextarea() {
 
 function refreshCollectorStatus() {
   const count = extractPhraseCandidates(els.collectedText.value).length;
-  setCollectorStatus(count ? `候选 ${count} 条` : "等待链接");
+  const status = count ? `候选 ${count} 条` : "等待链接";
+  if (collectorProgressTimer) {
+    setCollectorStatus(status);
+    return;
+  }
+  setCollectorProgress(count ? `候选 ${count} 条，可识别入库` : "等待开始", count ? 100 : 0, status);
 }
 
 async function collectFromUrl() {
   const url = normalizeArticleUrl(els.sourceUrl.value);
   if (!url) {
     showToast("先粘贴一个公开文章链接");
+    setCollectorProgress("等待文章链接", 0, "等待链接");
     return;
   }
 
-  setCollectorButtons(true);
+  setCollectorButtons(true, { allowClear: true });
+  collectorAbortController = new AbortController();
+  setCollectorProgress("校验链接", 10, "校验链接");
   try {
-    setCollectorStatus("AI 提炼中");
-    const data = await fetchArticleText(url);
+    await delay(120);
+    startCollectorProgressTimer("AI 抓取并提炼中", 28, 88);
+    const data = await fetchArticleText(url, collectorAbortController.signal);
+    stopCollectorProgressTimer();
+    setCollectorProgress("整理候选文案", 92, "整理文案");
     const phrases = normalizeCollectedPhrases(data.phrases || []);
     setCollectedPhrases(phrases);
     if (phrases.length) {
-      setCollectorStatus(`AI 提炼 ${phrases.length} 条`);
+      setCollectorProgress(`完成，提炼 ${phrases.length} 条`, 100, `AI 提炼 ${phrases.length} 条`);
       showToast("AI 已提炼候选文案，可以入库");
     } else {
       els.collectedText.value = "";
-      setCollectorStatus("未提炼出文案");
+      setCollectorProgress("完成，未提炼出文案", 100, "未提炼出文案");
       showToast("AI 没找到适合入库的短句");
     }
   } catch (error) {
+    stopCollectorProgressTimer();
     console.warn(error);
-    setCollectorStatus("抓取失败");
-    showToast("抓取失败，可能是链接不公开或源站拦截");
+    if (error.name === "AbortError") {
+      setCollectorProgress("已停止抓取", 0, "已停止");
+      showToast("已停止抓取");
+    } else {
+      setCollectorProgress("抓取失败，可换链接重试", 0, "抓取失败");
+      showToast("抓取失败，可能是链接不公开或源站拦截");
+    }
   } finally {
+    collectorAbortController = null;
     setCollectorButtons(false);
   }
 }
@@ -1361,6 +1418,7 @@ async function importCollectedPhrases() {
   const candidates = state.collectedPhrases;
   if (!candidates.length) {
     showToast("暂无可入库的候选文案");
+    setCollectorProgress("暂无候选文案", 0, "等待链接");
     return;
   }
 
@@ -1368,16 +1426,18 @@ async function importCollectedPhrases() {
   const uniqueCandidates = candidates.filter((phrase) => !existingTexts.has(phrase.text));
   if (!uniqueCandidates.length) {
     showToast("这些句子已经在库里了");
-    setCollectorStatus("没有新句");
+    setCollectorProgress("没有新句可入库", 100, "没有新句");
     return;
   }
 
   setCollectorButtons(true);
+  setCollectorProgress("准备识别入库", 10, "准备识别");
   const additions = [];
   try {
     for (let index = 0; index < uniqueCandidates.length; index += 1) {
       const candidate = uniqueCandidates[index];
-      setCollectorStatus(`识别中 ${index + 1}/${uniqueCandidates.length}`);
+      const percent = 10 + ((index + 1) / uniqueCandidates.length) * 80;
+      setCollectorProgress(`识别中 ${index + 1}/${uniqueCandidates.length}`, percent, `识别中 ${index + 1}/${uniqueCandidates.length}`);
       const inferred =
         candidate.extractedBy === "ai" ? candidate : await getSmartInference(candidate.text, { silent: true });
       additions.push(
@@ -1397,7 +1457,7 @@ async function importCollectedPhrases() {
     persistLocal({ sync: true });
     render();
     selectPhrase(additions[0].id);
-    setCollectorStatus(`已入库 ${additions.length} 条`);
+    setCollectorProgress(`完成，入库 ${additions.length} 条`, 100, `已入库 ${additions.length} 条`);
     showToast(`已自动识别并收进 ${additions.length} 条`);
   } finally {
     setCollectorButtons(false);
@@ -1405,10 +1465,15 @@ async function importCollectedPhrases() {
 }
 
 function clearCollector() {
+  if (collectorAbortController) {
+    collectorAbortController.abort();
+    collectorAbortController = null;
+  }
   els.sourceUrl.value = "";
   els.collectedText.value = "";
   state.collectedPhrases = [];
-  setCollectorStatus("等待链接");
+  stopCollectorProgressTimer();
+  setCollectorProgress("等待开始", 0, "等待链接");
 }
 
 async function makePhraseFromForm(existingId) {
@@ -1761,11 +1826,7 @@ function bindEvents() {
   els.pushCloudBtn.addEventListener("click", pushCloud);
   els.clearSyncBtn.addEventListener("click", clearSyncKey);
   els.syncCode.addEventListener("change", normalizeSyncInput);
-  els.openCollectorBtn.addEventListener("click", () => openToolDialog(els.collectorDialog));
-  els.closeCollectorBtn.addEventListener("click", () => closeToolDialog(els.collectorDialog));
-  els.collectorDialog.addEventListener("click", (event) => {
-    if (event.target === els.collectorDialog) closeToolDialog(els.collectorDialog);
-  });
+  els.openCollectorBtn.addEventListener("click", focusCollectorPanel);
   els.openSyncBtn.addEventListener("click", () => openToolDialog(els.syncDialog));
   els.closeSyncBtn.addEventListener("click", () => closeToolDialog(els.syncDialog));
   els.syncDialog.addEventListener("click", (event) => {

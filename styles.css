@@ -850,6 +850,64 @@ p {
   gap: 12px;
 }
 
+.collector-panel {
+  scroll-margin-top: 16px;
+}
+
+.collector-progress {
+  display: grid;
+  gap: 8px;
+  padding: 11px 12px;
+  background: linear-gradient(135deg, rgba(235, 249, 240, 0.92), rgba(255, 248, 210, 0.74));
+  border: 1px solid rgba(71, 185, 142, 0.34);
+  border-radius: var(--radius-sm);
+}
+
+.progress-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.progress-row strong {
+  color: #087152;
+  font-size: 13px;
+}
+
+.progress-track {
+  height: 8px;
+  overflow: hidden;
+  background: rgba(24, 45, 39, 0.1);
+  border-radius: 999px;
+}
+
+.progress-track span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #47b98e, #eadb75);
+  border-radius: inherit;
+  transition: width 0.28s ease;
+}
+
+.collector-panel.is-working .progress-track span {
+  background-size: 160% 100%;
+  animation: progressShimmer 1.2s linear infinite;
+}
+
+@keyframes progressShimmer {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 160% 0;
+  }
+}
+
 .tool-section {
   display: grid;
   gap: 12px;
