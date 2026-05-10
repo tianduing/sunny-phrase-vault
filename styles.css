@@ -546,6 +546,20 @@ p {
   border-color: rgba(71, 185, 142, 0.55);
 }
 
+#bulkModeBtn {
+  color: #ffffff;
+  background: #0b7a5a;
+  border-color: #0b7a5a;
+  box-shadow: 0 8px 18px rgba(11, 122, 90, 0.18);
+}
+
+#bulkModeBtn:hover,
+#bulkModeBtn.is-active {
+  color: #ffffff;
+  background: #075f47;
+  border-color: #075f47;
+}
+
 .tiny-text-button.danger {
   color: var(--danger);
 }
@@ -567,9 +581,13 @@ p {
   gap: 8px;
   align-items: center;
   justify-content: flex-end;
-  padding: 10px 0 0;
-  color: var(--muted);
+  margin-top: 10px;
+  padding: 10px;
+  color: #23413a;
   font-size: 12px;
+  background: #eefaf5;
+  border: 1px solid rgba(71, 185, 142, 0.28);
+  border-radius: var(--radius);
 }
 
 .bulk-toolbar[hidden] {
