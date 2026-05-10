@@ -156,6 +156,39 @@ button {
   align-items: center;
 }
 
+.view-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 0 14px;
+}
+
+.view-tab {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 22px rgba(24, 61, 55, 0.06);
+}
+
+.view-tab:hover,
+.view-tab.is-active {
+  color: #087152;
+  background: #eefaf5;
+  border-color: rgba(71, 185, 142, 0.55);
+}
+
+.view-tab svg {
+  width: 17px;
+  height: 17px;
+}
+
 .icon-button,
 .primary-button,
 .secondary-button,
@@ -242,9 +275,34 @@ button {
   align-items: start;
 }
 
+.workspace[data-active-view="home"] {
+  grid-template-columns: 270px minmax(0, 1fr);
+  grid-template-areas: "control stage";
+}
+
+.workspace[data-active-view="compose"],
+.workspace[data-active-view="tools"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "composer";
+}
+
+.workspace[data-active-view="tools"] {
+  grid-template-areas: "tools";
+}
+
+.workspace[data-active-view="library"] {
+  grid-template-columns: 270px minmax(0, 1fr);
+  grid-template-areas: "control library";
+}
+
+[data-views].is-hidden {
+  display: none !important;
+}
+
 .control-panel,
 .library-panel,
 .composer-panel,
+.tools-panel,
 .quote-board {
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid var(--line);
@@ -672,6 +730,13 @@ p {
   padding: 16px;
 }
 
+.tools-panel {
+  display: grid;
+  grid-area: tools;
+  gap: 16px;
+  padding: 16px;
+}
+
 .phrase-form {
   display: grid;
   gap: 12px;
@@ -680,11 +745,9 @@ p {
 
 .tool-dock {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
 }
 
 .tool-trigger {
@@ -767,6 +830,70 @@ p {
 .sync-box {
   display: grid;
   gap: 12px;
+}
+
+.tool-section {
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.section-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-heading h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.section-heading span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.preview-list,
+.trash-list {
+  display: grid;
+  gap: 10px;
+}
+
+.preview-item,
+.trash-item {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.trash-item {
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+}
+
+.preview-item strong,
+.trash-item strong {
+  display: block;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.preview-item span,
+.trash-item span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tool-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .collector-box label,
@@ -900,7 +1027,7 @@ p {
 
 .form-actions {
   display: grid;
-  grid-template-columns: minmax(120px, 0.9fr) minmax(120px, 0.85fr) minmax(150px, 1.15fr);
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
   gap: 10px;
 }
 
@@ -1039,7 +1166,8 @@ p {
   .quote-board,
   .control-panel,
   .library-panel,
-  .composer-panel {
+  .composer-panel,
+  .tools-panel {
     padding: 14px;
   }
 
@@ -1054,8 +1182,55 @@ p {
 
   .mode-field,
   .form-actions,
+  .tool-dock,
   .collector-actions,
   .sync-actions {
     grid-template-columns: 1fr;
+  }
+}
+
+.workspace[data-active-view="home"] {
+  grid-template-columns: 270px minmax(0, 1fr);
+  grid-template-areas: "control stage";
+}
+
+.workspace[data-active-view="library"] {
+  grid-template-columns: 270px minmax(0, 1fr);
+  grid-template-areas: "control library";
+}
+
+.workspace[data-active-view="compose"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "composer";
+}
+
+.workspace[data-active-view="tools"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "tools";
+}
+
+@media (max-width: 820px) {
+  .workspace[data-active-view="home"] {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "stage"
+      "control";
+  }
+
+  .workspace[data-active-view="library"] {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "control"
+      "library";
+  }
+
+  .workspace[data-active-view="compose"] {
+    grid-template-columns: 1fr;
+    grid-template-areas: "composer";
+  }
+
+  .workspace[data-active-view="tools"] {
+    grid-template-columns: 1fr;
+    grid-template-areas: "tools";
   }
 }

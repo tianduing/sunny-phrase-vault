@@ -42,6 +42,9 @@ export default {
       if (url.pathname === "/collect/url") {
         return collectUrl(payload, env);
       }
+      if (url.pathname === "/polish") {
+        return polishPhrase(payload, env);
+      }
 
       return classifyPhrase(payload, env);
     } catch (error) {
@@ -142,6 +145,7 @@ async function loadSync(payload, env) {
   return json(
     data || {
       customPhrases: [],
+      trashPhrases: [],
       favorites: [],
       updatedAt: null,
     },
@@ -158,9 +162,11 @@ async function saveSync(payload, env) {
   }
 
   const customPhrases = sanitizePhrases(payload.customPhrases);
+  const trashPhrases = sanitizeTrashPhrases(payload.trashPhrases);
   const favorites = sanitizeFavorites(payload.favorites);
   const body = {
     customPhrases,
+    trashPhrases,
     favorites,
     updatedAt: new Date().toISOString(),
   };
@@ -226,6 +232,81 @@ async function collectUrl(payload, env) {
     extractedBy: phrases.length ? "ai" : "ai-empty",
     url: target.href,
   });
+}
+
+async function polishPhrase(payload, env) {
+  const apiKey = env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return json({ error: "Missing OPENAI_API_KEY" }, 500);
+  }
+
+  const text = normalizeCollectedLine(payload.text);
+  if (!text) {
+    return json({ error: "Missing text" }, 400);
+  }
+
+  const tone = String(payload.tone || "清新自嘲").trim().slice(0, 24);
+  const baseUrl = (env.OPENAI_BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
+  const model = env.OPENAI_MODEL || DEFAULT_MODEL;
+  const prompt = [
+    "你是游戏短句润色器，只输出 JSON",
+    "把用户的一句中文游戏发言润色成更适合直接复制发送的短句",
+    "保留原意，可以更有梗、更凝练、更像玩家口吻",
+    "不要侮辱、不要仇恨、不要威胁、不要暴露个人信息",
+    "不要输出解释，不要输出多个版本",
+    "句子 6 到 60 个中文字符，去掉末尾句号、问号、感叹号、省略号",
+    "note 用 2 到 6 个中文字符说明风格",
+    `目标语气：${tone}`,
+    `原句：${text}`,
+  ].join("\n");
+
+  const upstream = await fetch(`${baseUrl}/v1/responses`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      input: prompt,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "phrase_polish",
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              text: { type: "string" },
+              note: { type: "string" },
+            },
+            required: ["text", "note"],
+          },
+        },
+      },
+    }),
+  });
+
+  if (!upstream.ok) {
+    return json({ error: "AI upstream failed" }, 502);
+  }
+
+  const data = await upstream.json();
+  const outputText = extractOutputText(data);
+  if (!outputText) {
+    return json({ error: "AI returned empty output" }, 502);
+  }
+
+  try {
+    const parsed = JSON.parse(outputText);
+    const note = String(parsed.note || "").trim();
+    return json({
+      text: normalizeCollectedLine(parsed.text || text),
+      note: note && note.length <= 8 && !note.includes("按要求") ? note : "AI 润色",
+    });
+  } catch {
+    return json({ error: "AI returned invalid JSON" }, 502);
+  }
 }
 
 async function extractPhrasesWithAi(article, env) {
@@ -516,6 +597,20 @@ function sanitizePhrases(value) {
         tone: String(item.tone || "soft").slice(0, 32),
         risk: ["safe", "spicy", "danger"].includes(item.risk) ? item.risk : "safe",
         note: String(item.note || "自定义").slice(0, 24),
+      },
+    ];
+  });
+}
+
+function sanitizeTrashPhrases(value) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, MAX_PHRASES).flatMap((item) => {
+    const phrase = sanitizePhrases([item])[0];
+    if (!phrase) return [];
+    return [
+      {
+        ...phrase,
+        deletedAt: String(item.deletedAt || new Date().toISOString()).slice(0, 40),
       },
     ];
   });

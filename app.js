@@ -294,12 +294,14 @@ const SEED_PHRASES = [
 
 const STORAGE_KEY = "canyon-quip-custom-v1";
 const FAVORITES_KEY = "canyon-quip-favorites-v1";
+const TRASH_KEY = "canyon-quip-trash-v1";
 const SYNC_KEY = "sunny-phrase-sync-key-v1";
 const DEFAULT_SYNC_KEY = "235126";
 const MAX_COLLECTED_PHRASES = 40;
 const MIN_COLLECTED_LENGTH = 6;
 
 const state = {
+  view: "home",
   category: "all",
   tone: "all",
   risk: "default",
@@ -309,7 +311,9 @@ const state = {
   collectedPhrases: [],
   bulkMode: false,
   selectedIds: new Set(),
+  importPreview: null,
   custom: normalizeStoredPhrases(readStorage(STORAGE_KEY, [])),
+  trash: normalizeTrashPhrases(readStorage(TRASH_KEY, [])),
   favorites: new Set(readStorage(FAVORITES_KEY, [])),
   syncKey: localStorage.getItem(SYNC_KEY) || DEFAULT_SYNC_KEY,
 };
@@ -317,6 +321,9 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 
 const els = {
+  workspace: $("#workspace"),
+  viewTabs: document.querySelectorAll("[data-view-target]"),
+  viewBlocks: document.querySelectorAll("[data-views]"),
   categoryTabs: $("#categoryTabs"),
   toneTabs: $("#toneTabs"),
   riskTabs: $("#riskTabs"),
@@ -340,6 +347,7 @@ const els = {
   phraseNote: $("#phraseNote"),
   phraseMode: () => document.querySelector('input[name="phraseMode"]:checked'),
   classifyBtn: $("#classifyBtn"),
+  polishBtn: $("#polishBtn"),
   submitBtn: $("#submitPhraseBtn"),
   cancelEditBtn: $("#cancelEditBtn"),
   syncCode: $("#syncCode"),
@@ -359,6 +367,16 @@ const els = {
   fetchUrlBtn: $("#fetchUrlBtn"),
   importCollectedBtn: $("#importCollectedBtn"),
   clearCollectorBtn: $("#clearCollectorBtn"),
+  chooseImportBtn: $("#chooseImportBtn"),
+  exportToolBtn: $("#exportToolBtn"),
+  importPreviewStatus: $("#importPreviewStatus"),
+  importPreviewCount: $("#importPreviewCount"),
+  importPreviewList: $("#importPreviewList"),
+  confirmImportBtn: $("#confirmImportBtn"),
+  cancelImportBtn: $("#cancelImportBtn"),
+  trashCount: $("#trashCount"),
+  trashList: $("#trashList"),
+  emptyTrashBtn: $("#emptyTrashBtn"),
   bulkModeBtn: $("#bulkModeBtn"),
   bulkToolbar: $("#bulkToolbar"),
   bulkSelectedCount: $("#bulkSelectedCount"),
@@ -373,6 +391,7 @@ const els = {
 };
 
 writeStorage(STORAGE_KEY, state.custom);
+writeStorage(TRASH_KEY, state.trash);
 
 function readStorage(key, fallback) {
   try {
@@ -389,6 +408,7 @@ function writeStorage(key, value) {
 
 function persistLocal(options = {}) {
   writeStorage(STORAGE_KEY, state.custom);
+  writeStorage(TRASH_KEY, state.trash);
   writeStorage(FAVORITES_KEY, [...state.favorites]);
   if (options.sync) {
     queueCloudSave();
@@ -428,6 +448,17 @@ function normalizeStoredPhrases(phrases) {
     : [];
 }
 
+function normalizeTrashPhrases(phrases) {
+  return Array.isArray(phrases)
+    ? phrases
+        .filter((item) => item && typeof item.text === "string")
+        .map((item) => ({
+          ...normalizePhrase(item),
+          deletedAt: item.deletedAt || new Date().toISOString(),
+        }))
+    : [];
+}
+
 function allPhrases() {
   return [...SEED_PHRASES, ...state.custom];
 }
@@ -462,6 +493,19 @@ function renderIcon() {
   if (window.lucide) {
     window.lucide.createIcons();
   }
+}
+
+function setView(view) {
+  state.view = view;
+  els.workspace.dataset.activeView = view;
+  els.viewTabs.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.viewTarget === view);
+  });
+  els.viewBlocks.forEach((block) => {
+    const views = block.dataset.views.split(/\s+/);
+    block.classList.toggle("is-hidden", !views.includes(view));
+  });
+  renderIcon();
 }
 
 function createChip(item, activeKey, group) {
@@ -540,6 +584,73 @@ function renderBulkControls(pool) {
   renderIcon();
 }
 
+function renderImportPreview() {
+  const preview = state.importPreview;
+  if (!preview) {
+    els.importPreviewStatus.textContent = "等待文件";
+    els.importPreviewCount.textContent = "未选择文件";
+    els.importPreviewList.innerHTML = `<div class="empty-state">选择 JSON 后，先预览再入库</div>`;
+    els.confirmImportBtn.disabled = true;
+    els.cancelImportBtn.disabled = true;
+    return;
+  }
+
+  const phraseCount = preview.customPhrases.length;
+  const favoriteCount = preview.favorites.length;
+  els.importPreviewStatus.textContent = preview.fileName || "已读取文件";
+  els.importPreviewCount.textContent = `${phraseCount} 句 / ${favoriteCount} 收藏`;
+  els.confirmImportBtn.disabled = phraseCount === 0 && favoriteCount === 0;
+  els.cancelImportBtn.disabled = false;
+
+  const items = preview.customPhrases.slice(0, 8).map((phrase) => {
+    const item = document.createElement("article");
+    item.className = "preview-item";
+    item.innerHTML = `
+      <strong>${escapeHtml(phrase.text)}</strong>
+      <span>${escapeHtml(findOption(CATEGORIES, phrase.category)?.label || "未分类")} · ${escapeHtml(findOption(TONES, phrase.tone)?.label || "未知语气")} · ${escapeHtml(phrase.note || "自定义")}</span>
+    `;
+    return item;
+  });
+
+  if (!items.length) {
+    els.importPreviewList.innerHTML = `<div class="empty-state">这个文件里没有可导入的自定义句</div>`;
+    return;
+  }
+
+  els.importPreviewList.replaceChildren(...items);
+}
+
+function renderTrash() {
+  els.trashCount.textContent = `${state.trash.length} 条`;
+  els.emptyTrashBtn.disabled = state.trash.length === 0;
+
+  if (!state.trash.length) {
+    els.trashList.innerHTML = `<div class="empty-state">回收站空空如也</div>`;
+    return;
+  }
+
+  const items = state.trash.map((phrase) => {
+    const item = document.createElement("article");
+    item.className = "trash-item";
+    item.innerHTML = `
+      <div>
+        <strong>${escapeHtml(phrase.text)}</strong>
+        <span>${escapeHtml(phrase.note || "自定义")} · ${formatDate(phrase.deletedAt)}</span>
+      </div>
+      <span class="phrase-tools">
+        <button class="tiny-button" type="button" title="恢复" aria-label="恢复" data-action="restore-trash" data-id="${phrase.id}">
+          <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+        </button>
+        <button class="tiny-button" type="button" title="彻底删除" aria-label="彻底删除" data-action="purge-trash" data-id="${phrase.id}">
+          <i data-lucide="trash-2" aria-hidden="true"></i>
+        </button>
+      </span>
+    `;
+    return item;
+  });
+  els.trashList.replaceChildren(...items);
+}
+
 function renderList(pool) {
   if (pool.length === 0) {
     els.phraseList.innerHTML = `<div class="empty-state">暂时没有匹配句子，换个筛选或添一句</div>`;
@@ -599,7 +710,7 @@ function renderList(pool) {
 }
 
 function escapeHtml(value) {
-  return value.replace(/[&<>"']/g, (char) => {
+  return String(value || "").replace(/[&<>"']/g, (char) => {
     const map = {
       "&": "&amp;",
       "<": "&lt;",
@@ -609,6 +720,12 @@ function escapeHtml(value) {
     };
     return map[char];
   });
+}
+
+function formatDate(value) {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "刚刚";
+  return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
 function selectPhrase(id) {
@@ -681,9 +798,10 @@ function toggleFavorite(id) {
 function deleteCustom(id) {
   const phrase = state.custom.find((item) => item.id === id);
   if (!phrase) return;
-  const confirmed = window.confirm(`删除这句？\n${phrase.text}`);
+  const confirmed = window.confirm(`移入回收站？\n${phrase.text}`);
   if (!confirmed) return;
 
+  moveToTrash([phrase]);
   state.custom = state.custom.filter((item) => item.id !== id);
   state.favorites.delete(id);
   persistLocal({ sync: true });
@@ -694,7 +812,19 @@ function deleteCustom(id) {
   } else {
     render();
   }
-  showToast("已从本地句库移除");
+  renderTrash();
+  showToast("已移入回收站");
+}
+
+function moveToTrash(phrases) {
+  const trashMap = new Map(state.trash.map((phrase) => [phrase.id, phrase]));
+  phrases.forEach((phrase) => {
+    trashMap.set(phrase.id, {
+      ...normalizePhrase(phrase),
+      deletedAt: new Date().toISOString(),
+    });
+  });
+  state.trash = [...trashMap.values()].slice(0, 300);
 }
 
 function setBulkMode(enabled) {
@@ -731,9 +861,11 @@ function deleteSelectedCustom() {
     showToast("先选中要删除的句子");
     return;
   }
-  const confirmed = window.confirm(`删除选中的 ${ids.size} 条自定义句？`);
+  const confirmed = window.confirm(`将选中的 ${ids.size} 条自定义句移入回收站？`);
   if (!confirmed) return;
 
+  const deleted = state.custom.filter((item) => ids.has(item.id));
+  moveToTrash(deleted);
   state.custom = state.custom.filter((item) => !ids.has(item.id));
   ids.forEach((id) => state.favorites.delete(id));
   if (ids.has(state.editingId)) resetComposer();
@@ -746,7 +878,45 @@ function deleteSelectedCustom() {
   } else {
     render();
   }
-  showToast(`已删除 ${ids.size} 条自定义句`);
+  renderTrash();
+  showToast(`已移入回收站 ${ids.size} 条`);
+}
+
+function restoreTrash(id) {
+  const phrase = state.trash.find((item) => item.id === id);
+  if (!phrase) return;
+  const customIds = new Set(state.custom.map((item) => item.id));
+  const restored = normalizePhrase({
+    ...phrase,
+    id: customIds.has(phrase.id) ? `custom-${makeId()}` : phrase.id,
+  });
+  state.custom.unshift(restored);
+  state.trash = state.trash.filter((item) => item.id !== id);
+  persistLocal({ sync: true });
+  render();
+  renderTrash();
+  showToast("已从回收站恢复");
+}
+
+function purgeTrash(id) {
+  const phrase = state.trash.find((item) => item.id === id);
+  if (!phrase) return;
+  const confirmed = window.confirm(`彻底删除这句？\n${phrase.text}`);
+  if (!confirmed) return;
+  state.trash = state.trash.filter((item) => item.id !== id);
+  persistLocal({ sync: true });
+  renderTrash();
+  showToast("已彻底删除");
+}
+
+function emptyTrash() {
+  if (!state.trash.length) return;
+  const confirmed = window.confirm(`彻底清空回收站里的 ${state.trash.length} 条句子？`);
+  if (!confirmed) return;
+  state.trash = [];
+  persistLocal({ sync: true });
+  renderTrash();
+  showToast("回收站已清空");
 }
 
 function beginEdit(id) {
@@ -886,6 +1056,53 @@ async function getSmartInference(text, options = {}) {
     }
   }
   return inferPhrase(text);
+}
+
+async function polishPhraseWithRelay(text, tone) {
+  const endpoint = relayUrl("/polish");
+  if (!endpoint) throw new Error("Missing relay endpoint");
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text,
+      tone: findOption(TONES, tone)?.label || "清新自嘲",
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `Polish failed ${response.status}`);
+  return {
+    text: trimSentencePeriod(data.text || text),
+    note: String(data.note || "AI 润色").slice(0, 24),
+  };
+}
+
+async function polishCurrentPhrase() {
+  const text = trimSentencePeriod(els.phraseText.value);
+  if (!text) {
+    showToast("先写一句，才好锦上添花");
+    return;
+  }
+
+  els.polishBtn.disabled = true;
+  els.polishBtn.innerHTML = `<i data-lucide="loader-circle" aria-hidden="true"></i>润色中`;
+  renderIcon();
+  try {
+    const result = await polishPhraseWithRelay(text, els.phraseTone.value);
+    els.phraseText.value = result.text;
+    if (!els.phraseNote.value.trim() || ["自定义", "智能划分", "AI 划分"].includes(els.phraseNote.value.trim())) {
+      els.phraseNote.value = result.note;
+    }
+    await applyInference();
+    showToast("已润色，文气稍增");
+  } catch (error) {
+    console.warn(error);
+    showToast("润色失败，稍后再试");
+  } finally {
+    els.polishBtn.disabled = false;
+    els.polishBtn.innerHTML = `<i data-lucide="sparkle" aria-hidden="true"></i>一键润色`;
+    renderIcon();
+  }
 }
 
 async function applyInference() {
@@ -1237,6 +1454,8 @@ function render() {
   renderStats(pool);
   renderBulkControls(pool);
   renderList(pool);
+  renderImportPreview();
+  renderTrash();
   els.favoriteBtn.classList.toggle("is-active", state.favorites.has(state.currentId));
 }
 
@@ -1294,6 +1513,7 @@ async function saveCloudData(syncKey) {
     body: JSON.stringify({
       syncKey,
       customPhrases: state.custom,
+      trashPhrases: state.trash,
       favorites: [...state.favorites],
     }),
   });
@@ -1312,8 +1532,10 @@ async function syncNow() {
     setSyncStatus("同步中");
     const cloud = await loadCloudData(syncKey);
     const cloudPhrases = normalizeStoredPhrases(cloud.customPhrases);
+    const cloudTrash = normalizeTrashPhrases(cloud.trashPhrases);
     const cloudFavorites = Array.isArray(cloud.favorites) ? cloud.favorites : [];
     state.custom = mergePhrases(state.custom, cloudPhrases);
+    state.trash = mergePhrases(state.trash, cloudTrash);
     state.favorites = new Set([...state.favorites, ...cloudFavorites]);
     persistLocal();
     await saveCloudData(syncKey);
@@ -1380,6 +1602,7 @@ function exportLibrary() {
     version: 2,
     exportedAt: new Date().toISOString(),
     customPhrases: state.custom,
+    trashPhrases: state.trash,
     favorites: [...state.favorites],
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -1396,20 +1619,38 @@ async function importLibrary(file) {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    const importedCustom = normalizeStoredPhrases(payload.customPhrases);
-    const importedFavorites = Array.isArray(payload.favorites) ? payload.favorites : [];
-    const merged = new Map(state.custom.map((item) => [item.id, item]));
-    importedCustom.forEach((item) => merged.set(item.id, item));
-    state.custom = [...merged.values()];
-    state.favorites = new Set([...state.favorites, ...importedFavorites]);
-    persistLocal({ sync: true });
-    render();
-    showToast("导入完成，旧雨新知并入句库");
+    state.importPreview = {
+      fileName: file.name,
+      customPhrases: normalizeStoredPhrases(payload.customPhrases),
+      trashPhrases: normalizeTrashPhrases(payload.trashPhrases),
+      favorites: Array.isArray(payload.favorites) ? payload.favorites : [],
+    };
+    setView("tools");
+    renderImportPreview();
+    showToast("已读取文件，先预览再导入");
   } catch {
     showToast("导入失败，请检查 JSON 文件");
   } finally {
     els.importInput.value = "";
   }
+}
+
+function confirmImportPreview() {
+  const preview = state.importPreview;
+  if (!preview) return;
+  state.custom = mergePhrases(state.custom, preview.customPhrases);
+  state.trash = mergePhrases(state.trash, preview.trashPhrases || []);
+  state.favorites = new Set([...state.favorites, ...preview.favorites]);
+  state.importPreview = null;
+  persistLocal({ sync: true });
+  render();
+  showToast("导入完成，旧雨新知并入句库");
+}
+
+function cancelImportPreview() {
+  state.importPreview = null;
+  renderImportPreview();
+  showToast("已取消导入预览");
 }
 
 async function handleFormSubmit(event) {
@@ -1463,8 +1704,13 @@ function bindEvents() {
     if (actionButton.dataset.action === "copy") copyPhrase(phrase);
     if (actionButton.dataset.action === "edit") beginEdit(actionButton.dataset.id);
     if (actionButton.dataset.action === "delete") deleteCustom(actionButton.dataset.id);
+    if (actionButton.dataset.action === "restore-trash") restoreTrash(actionButton.dataset.id);
+    if (actionButton.dataset.action === "purge-trash") purgeTrash(actionButton.dataset.id);
   });
 
+  els.viewTabs.forEach((button) => {
+    button.addEventListener("click", () => setView(button.dataset.viewTarget));
+  });
   els.randomBtn.addEventListener("click", pickRandom);
   els.copyBtn.addEventListener("click", () => {
     copyPhrase(allPhrases().find((item) => item.id === state.currentId));
@@ -1472,6 +1718,11 @@ function bindEvents() {
   els.favoriteBtn.addEventListener("click", () => toggleFavorite(state.currentId));
   els.exportBtn.addEventListener("click", exportLibrary);
   els.importInput.addEventListener("change", (event) => importLibrary(event.target.files[0]));
+  els.chooseImportBtn.addEventListener("click", () => els.importInput.click());
+  els.exportToolBtn.addEventListener("click", exportLibrary);
+  els.confirmImportBtn.addEventListener("click", confirmImportPreview);
+  els.cancelImportBtn.addEventListener("click", cancelImportPreview);
+  els.emptyTrashBtn.addEventListener("click", emptyTrash);
   els.bulkModeBtn.addEventListener("click", () => setBulkMode(!state.bulkMode));
   els.selectVisibleBtn.addEventListener("click", selectVisibleCustom);
   els.clearSelectionBtn.addEventListener("click", clearBulkSelection);
@@ -1483,6 +1734,7 @@ function bindEvents() {
   els.classifyBtn.addEventListener("click", () => {
     applyInference();
   });
+  els.polishBtn.addEventListener("click", polishCurrentPhrase);
   els.syncNowBtn.addEventListener("click", syncNow);
   els.pushCloudBtn.addEventListener("click", pushCloud);
   els.clearSyncBtn.addEventListener("click", clearSyncKey);
@@ -1526,6 +1778,7 @@ function bindEvents() {
 
 renderSelects();
 bindEvents();
+setView(state.view);
 render();
 updateComposerState();
 refreshCollectorStatus();

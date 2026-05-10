@@ -38,6 +38,25 @@
         </div>
       </header>
 
+      <nav class="view-tabs" aria-label="页面切换">
+        <button class="view-tab is-active" type="button" data-view-target="home">
+          <i data-lucide="sparkles" aria-hidden="true"></i>
+          抽句
+        </button>
+        <button class="view-tab" type="button" data-view-target="compose">
+          <i data-lucide="plus" aria-hidden="true"></i>
+          收录
+        </button>
+        <button class="view-tab" type="button" data-view-target="library">
+          <i data-lucide="library" aria-hidden="true"></i>
+          句库
+        </button>
+        <button class="view-tab" type="button" data-view-target="tools">
+          <i data-lucide="wrench" aria-hidden="true"></i>
+          工具
+        </button>
+      </nav>
+
       <section class="summary-strip" aria-label="句库概览">
         <article>
           <span id="totalCount">0</span>
@@ -53,8 +72,8 @@
         </article>
       </section>
 
-      <div class="workspace">
-        <aside class="control-panel" aria-label="筛选面板">
+      <div class="workspace" id="workspace" data-active-view="home">
+        <aside class="control-panel" aria-label="筛选面板" data-views="home library">
           <div class="panel-head">
             <h1>晴天语料箱</h1>
             <p>按场景点亮，按语气收束</p>
@@ -76,7 +95,7 @@
           </section>
         </aside>
 
-        <section class="stage" aria-label="当前推荐">
+        <section class="stage" aria-label="当前推荐" data-views="home">
           <figure class="arena-visual">
             <img src="./assets/arena-morning.png" alt="清晨峡谷风格的抽象竞技场插画" />
           </figure>
@@ -106,7 +125,7 @@
           </article>
         </section>
 
-        <aside class="library-panel" aria-label="句库列表">
+        <aside class="library-panel" aria-label="句库列表" data-views="library">
           <div class="panel-heading">
             <h2>句库</h2>
             <div class="library-heading-actions">
@@ -126,7 +145,7 @@
           <div class="phrase-list" id="phraseList"></div>
         </aside>
 
-        <section class="composer-panel" aria-labelledby="composerTitle">
+        <section class="composer-panel" aria-labelledby="composerTitle" data-views="compose">
           <div class="panel-heading">
             <h2 id="composerTitle">添一句</h2>
             <span>本地优先</span>
@@ -181,6 +200,10 @@
                 <i data-lucide="wand-sparkles" aria-hidden="true"></i>
                 智能划分
               </button>
+              <button class="secondary-button" id="polishBtn" type="button">
+                <i data-lucide="sparkle" aria-hidden="true"></i>
+                一键润色
+              </button>
               <button class="secondary-button" id="cancelEditBtn" type="button" hidden>
                 <i data-lucide="x" aria-hidden="true"></i>
                 取消编辑
@@ -191,7 +214,13 @@
               </button>
             </div>
           </form>
+        </section>
 
+        <section class="tools-panel" aria-labelledby="toolsTitle" data-views="tools">
+          <div class="panel-heading">
+            <h2 id="toolsTitle">工具箱</h2>
+            <span>采集、同步、导入与回收</span>
+          </div>
           <div class="tool-dock" aria-label="辅助工具">
             <button class="tool-trigger" id="openCollectorBtn" type="button">
               <span>
@@ -207,7 +236,55 @@
               </span>
               <small id="syncStatus">未连接</small>
             </button>
+            <button class="tool-trigger" id="chooseImportBtn" type="button">
+              <span>
+                <i data-lucide="upload" aria-hidden="true"></i>
+                导入预览
+              </span>
+              <small id="importPreviewStatus">等待文件</small>
+            </button>
+            <button class="tool-trigger" id="exportToolBtn" type="button">
+              <span>
+                <i data-lucide="download" aria-hidden="true"></i>
+                导出备份
+              </span>
+              <small>保存一份 JSON</small>
+            </button>
           </div>
+
+          <section class="tool-section" aria-labelledby="importPreviewTitle">
+            <div class="section-heading">
+              <h3 id="importPreviewTitle">导入预览</h3>
+              <span id="importPreviewCount">未选择文件</span>
+            </div>
+            <div class="preview-list" id="importPreviewList">
+              <div class="empty-state">选择 JSON 后，先预览再入库</div>
+            </div>
+            <div class="tool-actions">
+              <button class="primary-button" id="confirmImportBtn" type="button" disabled>
+                <i data-lucide="check" aria-hidden="true"></i>
+                确认导入
+              </button>
+              <button class="secondary-button" id="cancelImportBtn" type="button" disabled>
+                <i data-lucide="x" aria-hidden="true"></i>
+                取消预览
+              </button>
+            </div>
+          </section>
+
+          <section class="tool-section" aria-labelledby="trashTitle">
+            <div class="section-heading">
+              <h3 id="trashTitle">回收站</h3>
+              <span id="trashCount">0 条</span>
+            </div>
+            <div class="trash-list" id="trashList"></div>
+            <div class="tool-actions">
+              <button class="secondary-button" id="emptyTrashBtn" type="button">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                清空回收站
+              </button>
+            </div>
+          </section>
 
           <dialog class="tool-dialog" id="collectorDialog" aria-labelledby="collectorTitle">
             <div class="dialog-card">
