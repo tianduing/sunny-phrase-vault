@@ -1448,7 +1448,27 @@ async function makePhraseFromForm(existingId) {
   };
 }
 
+function captureScrollPosition() {
+  return {
+    windowX: window.scrollX,
+    windowY: window.scrollY,
+    phraseList: els.phraseList.scrollTop,
+    previewList: els.importPreviewList.scrollTop,
+    trashList: els.trashList.scrollTop,
+  };
+}
+
+function restoreScrollPosition(position) {
+  window.requestAnimationFrame(() => {
+    window.scrollTo(position.windowX, position.windowY);
+    els.phraseList.scrollTop = position.phraseList;
+    els.importPreviewList.scrollTop = position.previewList;
+    els.trashList.scrollTop = position.trashList;
+  });
+}
+
 function render() {
+  const scrollPosition = captureScrollPosition();
   const pool = filteredPhrases();
   renderTabs();
   renderStats(pool);
@@ -1457,6 +1477,7 @@ function render() {
   renderImportPreview();
   renderTrash();
   els.favoriteBtn.classList.toggle("is-active", state.favorites.has(state.currentId));
+  restoreScrollPosition(scrollPosition);
 }
 
 function showToast(message) {
@@ -1691,6 +1712,7 @@ function bindEvents() {
 
     const actionButton = event.target.closest("[data-action]");
     if (!actionButton) return;
+    event.preventDefault();
     const phrase = allPhrases().find((item) => item.id === actionButton.dataset.id);
     if (actionButton.dataset.action === "bulk-toggle") toggleBulkSelection(actionButton.dataset.id);
     if (actionButton.dataset.action === "select") {
