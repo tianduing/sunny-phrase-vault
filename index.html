@@ -109,7 +109,19 @@
         <aside class="library-panel" aria-label="句库列表">
           <div class="panel-heading">
             <h2>句库</h2>
-            <span id="visibleCount">0 条</span>
+            <div class="library-heading-actions">
+              <span id="visibleCount">0 条</span>
+              <button class="tiny-text-button" id="bulkModeBtn" type="button">
+                <i data-lucide="check-square" aria-hidden="true"></i>
+                多选
+              </button>
+            </div>
+          </div>
+          <div class="bulk-toolbar" id="bulkToolbar" hidden>
+            <span id="bulkSelectedCount">已选 0 条</span>
+            <button class="tiny-text-button" id="selectVisibleBtn" type="button">选中当前</button>
+            <button class="tiny-text-button" id="clearSelectionBtn" type="button">清空</button>
+            <button class="tiny-text-button danger" id="deleteSelectedBtn" type="button">删除所选</button>
           </div>
           <div class="phrase-list" id="phraseList"></div>
         </aside>

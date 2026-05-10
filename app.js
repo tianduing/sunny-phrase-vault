@@ -307,6 +307,8 @@ const state = {
   currentId: null,
   editingId: null,
   collectedPhrases: [],
+  bulkMode: false,
+  selectedIds: new Set(),
   custom: normalizeStoredPhrases(readStorage(STORAGE_KEY, [])),
   favorites: new Set(readStorage(FAVORITES_KEY, [])),
   syncKey: localStorage.getItem(SYNC_KEY) || DEFAULT_SYNC_KEY,
@@ -357,6 +359,12 @@ const els = {
   fetchUrlBtn: $("#fetchUrlBtn"),
   importCollectedBtn: $("#importCollectedBtn"),
   clearCollectorBtn: $("#clearCollectorBtn"),
+  bulkModeBtn: $("#bulkModeBtn"),
+  bulkToolbar: $("#bulkToolbar"),
+  bulkSelectedCount: $("#bulkSelectedCount"),
+  selectVisibleBtn: $("#selectVisibleBtn"),
+  clearSelectionBtn: $("#clearSelectionBtn"),
+  deleteSelectedBtn: $("#deleteSelectedBtn"),
   totalCount: $("#totalCount"),
   favoriteCount: $("#favoriteCount"),
   customCount: $("#customCount"),
@@ -503,6 +511,35 @@ function renderStats(pool) {
   els.visibleCount.textContent = `${pool.length} 条`;
 }
 
+function isCustomId(id) {
+  return typeof id === "string" && id.startsWith("custom-");
+}
+
+function visibleCustomIds(pool = filteredPhrases()) {
+  return pool.filter((phrase) => isCustomId(phrase.id)).map((phrase) => phrase.id);
+}
+
+function pruneSelection() {
+  const customIds = new Set(state.custom.map((phrase) => phrase.id));
+  [...state.selectedIds].forEach((id) => {
+    if (!customIds.has(id)) state.selectedIds.delete(id);
+  });
+}
+
+function renderBulkControls(pool) {
+  pruneSelection();
+  const selectedCount = state.selectedIds.size;
+  const visibleCustomCount = visibleCustomIds(pool).length;
+  els.bulkToolbar.hidden = !state.bulkMode;
+  els.bulkSelectedCount.textContent = `已选 ${selectedCount} 条`;
+  els.bulkModeBtn.classList.toggle("is-active", state.bulkMode);
+  els.bulkModeBtn.innerHTML = `<i data-lucide="${state.bulkMode ? "x" : "check-square"}" aria-hidden="true"></i>${state.bulkMode ? "退出" : "多选"}`;
+  els.selectVisibleBtn.disabled = visibleCustomCount === 0;
+  els.clearSelectionBtn.disabled = selectedCount === 0;
+  els.deleteSelectedBtn.disabled = selectedCount === 0;
+  renderIcon();
+}
+
 function renderList(pool) {
   if (pool.length === 0) {
     els.phraseList.innerHTML = `<div class="empty-state">暂时没有匹配句子，换个筛选或添一句</div>`;
@@ -514,10 +551,19 @@ function renderList(pool) {
     const tone = findOption(TONES, phrase.tone)?.label || "未知语气";
     const isFavorite = state.favorites.has(phrase.id);
     const isCustom = phrase.id.startsWith("custom-");
+    const isChecked = state.selectedIds.has(phrase.id);
     const item = document.createElement("article");
-    item.className = `phrase-item${phrase.id === state.currentId ? " is-selected" : ""}`;
+    item.className = `phrase-item${phrase.id === state.currentId ? " is-selected" : ""}${isChecked ? " is-checked" : ""}`;
     item.dataset.id = phrase.id;
     item.innerHTML = `
+      ${
+        state.bulkMode
+          ? `<label class="phrase-check${isCustom ? "" : " is-disabled"}" title="${isCustom ? "选中这句" : "内置句不可删除"}" aria-label="${isCustom ? "选中这句" : "内置句不可删除"}">
+              <input type="checkbox" data-action="bulk-toggle" data-id="${phrase.id}" ${isChecked ? "checked" : ""} ${isCustom ? "" : "disabled"} />
+              <span></span>
+            </label>`
+          : ""
+      }
       <button class="phrase-select" type="button" data-action="select" data-id="${phrase.id}">
         <span class="phrase-line">${escapeHtml(phrase.text)}</span>
         <span class="phrase-foot">
@@ -649,6 +695,58 @@ function deleteCustom(id) {
     render();
   }
   showToast("已从本地句库移除");
+}
+
+function setBulkMode(enabled) {
+  state.bulkMode = enabled;
+  if (!enabled) state.selectedIds.clear();
+  render();
+}
+
+function toggleBulkSelection(id) {
+  if (!isCustomId(id)) return;
+  if (state.selectedIds.has(id)) {
+    state.selectedIds.delete(id);
+  } else {
+    state.selectedIds.add(id);
+  }
+  render();
+}
+
+function selectVisibleCustom() {
+  visibleCustomIds().forEach((id) => state.selectedIds.add(id));
+  render();
+  showToast("已选中当前筛选里的自定义句");
+}
+
+function clearBulkSelection() {
+  state.selectedIds.clear();
+  render();
+}
+
+function deleteSelectedCustom() {
+  pruneSelection();
+  const ids = new Set(state.selectedIds);
+  if (!ids.size) {
+    showToast("先选中要删除的句子");
+    return;
+  }
+  const confirmed = window.confirm(`删除选中的 ${ids.size} 条自定义句？`);
+  if (!confirmed) return;
+
+  state.custom = state.custom.filter((item) => !ids.has(item.id));
+  ids.forEach((id) => state.favorites.delete(id));
+  if (ids.has(state.editingId)) resetComposer();
+  if (ids.has(state.currentId)) state.currentId = null;
+  state.selectedIds.clear();
+  state.bulkMode = false;
+  persistLocal({ sync: true });
+  if (!state.currentId) {
+    pickRandom();
+  } else {
+    render();
+  }
+  showToast(`已删除 ${ids.size} 条自定义句`);
 }
 
 function beginEdit(id) {
@@ -1137,6 +1235,7 @@ function render() {
   const pool = filteredPhrases();
   renderTabs();
   renderStats(pool);
+  renderBulkControls(pool);
   renderList(pool);
   els.favoriteBtn.classList.toggle("is-active", state.favorites.has(state.currentId));
 }
@@ -1352,7 +1451,14 @@ function bindEvents() {
     const actionButton = event.target.closest("[data-action]");
     if (!actionButton) return;
     const phrase = allPhrases().find((item) => item.id === actionButton.dataset.id);
-    if (actionButton.dataset.action === "select") selectPhrase(actionButton.dataset.id);
+    if (actionButton.dataset.action === "bulk-toggle") toggleBulkSelection(actionButton.dataset.id);
+    if (actionButton.dataset.action === "select") {
+      if (state.bulkMode && phrase?.id.startsWith("custom-")) {
+        toggleBulkSelection(actionButton.dataset.id);
+      } else {
+        selectPhrase(actionButton.dataset.id);
+      }
+    }
     if (actionButton.dataset.action === "favorite") toggleFavorite(actionButton.dataset.id);
     if (actionButton.dataset.action === "copy") copyPhrase(phrase);
     if (actionButton.dataset.action === "edit") beginEdit(actionButton.dataset.id);
@@ -1366,6 +1472,10 @@ function bindEvents() {
   els.favoriteBtn.addEventListener("click", () => toggleFavorite(state.currentId));
   els.exportBtn.addEventListener("click", exportLibrary);
   els.importInput.addEventListener("change", (event) => importLibrary(event.target.files[0]));
+  els.bulkModeBtn.addEventListener("click", () => setBulkMode(!state.bulkMode));
+  els.selectVisibleBtn.addEventListener("click", selectVisibleCustom);
+  els.clearSelectionBtn.addEventListener("click", clearBulkSelection);
+  els.deleteSelectedBtn.addEventListener("click", deleteSelectedCustom);
   els.searchInput.addEventListener("input", (event) => {
     state.search = event.target.value;
     render();
