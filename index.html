@@ -100,6 +100,8 @@
             <img src="./assets/arena-morning.png" alt="清晨峡谷风格的抽象竞技场插画" />
           </figure>
 
+          <section class="quick-scenes" id="quickScenes" aria-label="对局场景快捷入口"></section>
+
           <article class="quote-board">
             <div class="quote-meta">
               <span class="badge" id="currentCategory">全部场景</span>
@@ -117,6 +119,10 @@
               <button class="secondary-button" id="copyBtn" type="button">
                 <i data-lucide="copy" aria-hidden="true"></i>
                 复制
+              </button>
+              <button class="secondary-button" id="variantCurrentBtn" type="button">
+                <i data-lucide="sparkles" aria-hidden="true"></i>
+                变体
               </button>
               <button class="icon-button board-star" id="favoriteBtn" type="button" title="收藏当前句子" aria-label="收藏当前句子">
                 <i data-lucide="star" aria-hidden="true"></i>
@@ -272,9 +278,38 @@
                 <input id="sourceUrl" type="url" autocomplete="off" placeholder="粘贴公众号或网页文章链接" />
               </label>
               <label>
-                <span>候选文案</span>
-                <textarea id="collectedText" rows="5" placeholder="抓到的候选句会出现在这里，可直接识别入库"></textarea>
+                <span>手动补充候选</span>
+                <textarea id="collectedText" rows="5" placeholder="AI 提炼出的候选句会同步到这里，也可以手动补几句"></textarea>
               </label>
+              <div class="collector-workbench" aria-label="采集工作台">
+                <article class="workbench-column">
+                  <div class="workbench-head">
+                    <strong>原文抓取</strong>
+                    <span id="sourceLineCount">未抓取</span>
+                  </div>
+                  <div class="workbench-body source-preview" id="sourcePreview">
+                    <div class="empty-state">粘贴链接后，这里显示原文片段</div>
+                  </div>
+                </article>
+                <article class="workbench-column">
+                  <div class="workbench-head">
+                    <strong>AI 提炼</strong>
+                    <span id="candidateCount">0 条</span>
+                  </div>
+                  <div class="workbench-body candidate-list" id="candidateList">
+                    <div class="empty-state">候选句会在这里勾选确认</div>
+                  </div>
+                </article>
+                <article class="workbench-column">
+                  <div class="workbench-head">
+                    <strong>过滤记录</strong>
+                    <span id="rejectedCount">0 条</span>
+                  </div>
+                  <div class="workbench-body rejected-list" id="rejectedList">
+                    <div class="empty-state">噪音字段会在这里说明原因</div>
+                  </div>
+                </article>
+              </div>
               <div class="collector-actions">
                 <button class="primary-button" id="fetchUrlBtn" type="button">
                   <i data-lucide="search" aria-hidden="true"></i>
@@ -282,7 +317,7 @@
                 </button>
                 <button class="secondary-button" id="importCollectedBtn" type="button">
                   <i data-lucide="wand-sparkles" aria-hidden="true"></i>
-                  识别入库
+                  确认入库
                 </button>
                 <button class="secondary-button" id="clearCollectorBtn" type="button">
                   <i data-lucide="eraser" aria-hidden="true"></i>
@@ -356,9 +391,27 @@
               </section>
             </div>
           </dialog>
+
         </section>
       </div>
     </main>
+
+    <dialog class="tool-dialog variant-dialog" id="variantDialog" aria-labelledby="variantTitle">
+      <div class="dialog-card">
+        <div class="dialog-heading">
+          <h2 id="variantTitle">一键生成变体</h2>
+          <button class="icon-button dialog-close" id="closeVariantBtn" type="button" title="关闭" aria-label="关闭变体生成">
+            <i data-lucide="x" aria-hidden="true"></i>
+          </button>
+        </div>
+        <section class="variant-box">
+          <p class="variant-original" id="variantOriginal">选择一句后生成</p>
+          <div class="variant-styles" id="variantStyleButtons"></div>
+          <div class="variant-status" id="variantStatus">选一种风格，AI 会给出可复制的新版本</div>
+          <div class="variant-results" id="variantResultList"></div>
+        </section>
+      </div>
+    </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>

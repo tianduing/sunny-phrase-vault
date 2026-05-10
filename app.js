@@ -33,6 +33,22 @@ const RISK_LABELS = {
   danger: "红色",
 };
 
+const QUICK_SCENES = [
+  { key: "opening", label: "开局可用", hint: "先声夺人", category: "lane", tone: "all", risk: "default", icon: "flag" },
+  { key: "fallen", label: "被抓可用", hint: "倒也体面", category: "fallen", tone: "all", risk: "default", icon: "skull" },
+  { key: "comeback", label: "逆风可用", hint: "留得青山", category: "comeback", tone: "hype", risk: "default", icon: "flame" },
+  { key: "winning", label: "赢了可用", hint: "鸣金收兵", category: "ending", tone: "classic", risk: "default", icon: "trophy" },
+  { key: "teammate", label: "队友离谱", hint: "春秋笔法", category: "teammate", tone: "yin", risk: "default", icon: "users" },
+];
+
+const VARIANT_STYLES = [
+  { key: "classic", label: "成语典故版", tone: "classic", risk: "safe", icon: "scroll-text" },
+  { key: "yin", label: "阴阳怪气版", tone: "yin", risk: "spicy", icon: "moon" },
+  { key: "soft", label: "清新自嘲版", tone: "soft", risk: "safe", icon: "leaf" },
+  { key: "king", label: "王者嘴替版", tone: "drama", risk: "safe", icon: "swords" },
+  { key: "safe", label: "降火文明版", tone: "soft", risk: "safe", icon: "shield-check" },
+];
+
 const SEED_PHRASES = [
   {
     id: "seed-001",
@@ -299,6 +315,50 @@ const SYNC_KEY = "sunny-phrase-sync-key-v1";
 const DEFAULT_SYNC_KEY = "235126";
 const MAX_COLLECTED_PHRASES = 40;
 const MIN_COLLECTED_LENGTH = 6;
+const COLLECTED_NOISE_WORDS = [
+  "阅读全文",
+  "阅读原文",
+  "点击",
+  "关注",
+  "公众号",
+  "微信",
+  "作者",
+  "来源",
+  "声明",
+  "广告",
+  "二维码",
+  "扫码",
+  "图片",
+  "视频",
+  "播放",
+  "菜单",
+  "投诉",
+  "在看",
+  "转发",
+  "分享",
+  "复制链接",
+  "留言",
+  "评论",
+  "发布于",
+  "展开",
+  "收起",
+  "订阅",
+  "搜一搜",
+  "预览时标签不可点",
+  "继续滑动看下一个",
+  "向上滑动看下一个",
+  "使用完整服务",
+  "轻点两下取消赞",
+  "取消赞",
+  "引导切换",
+  "功能提示",
+  "含自贬词",
+  "用迹说明",
+  "公网地址",
+  "多设备",
+  "电脑打开",
+  "手机也能",
+];
 
 const state = {
   view: "home",
@@ -309,6 +369,11 @@ const state = {
   currentId: null,
   editingId: null,
   collectedPhrases: [],
+  collectedSource: { title: "", text: "", url: "" },
+  rejectedPhrases: [],
+  selectedCollectedTexts: new Set(),
+  variantPhraseId: null,
+  variantResults: [],
   bulkMode: false,
   selectedIds: new Set(),
   importPreview: null,
@@ -330,6 +395,7 @@ const els = {
   categoryTabs: $("#categoryTabs"),
   toneTabs: $("#toneTabs"),
   riskTabs: $("#riskTabs"),
+  quickScenes: $("#quickScenes"),
   phraseList: $("#phraseList"),
   currentQuote: $("#currentQuote"),
   currentNote: $("#currentNote"),
@@ -338,6 +404,7 @@ const els = {
   currentRisk: $("#currentRisk"),
   randomBtn: $("#randomBtn"),
   copyBtn: $("#copyBtn"),
+  variantCurrentBtn: $("#variantCurrentBtn"),
   favoriteBtn: $("#favoriteBtn"),
   exportBtn: $("#exportBtn"),
   importInput: $("#importInput"),
@@ -369,6 +436,12 @@ const els = {
   sourceUrl: $("#sourceUrl"),
   collectedText: $("#collectedText"),
   collectorStatus: $("#collectorStatus"),
+  sourceLineCount: $("#sourceLineCount"),
+  sourcePreview: $("#sourcePreview"),
+  candidateCount: $("#candidateCount"),
+  candidateList: $("#candidateList"),
+  rejectedCount: $("#rejectedCount"),
+  rejectedList: $("#rejectedList"),
   fetchUrlBtn: $("#fetchUrlBtn"),
   importCollectedBtn: $("#importCollectedBtn"),
   clearCollectorBtn: $("#clearCollectorBtn"),
@@ -382,6 +455,12 @@ const els = {
   trashCount: $("#trashCount"),
   trashList: $("#trashList"),
   emptyTrashBtn: $("#emptyTrashBtn"),
+  variantDialog: $("#variantDialog"),
+  closeVariantBtn: $("#closeVariantBtn"),
+  variantOriginal: $("#variantOriginal"),
+  variantStyleButtons: $("#variantStyleButtons"),
+  variantStatus: $("#variantStatus"),
+  variantResultList: $("#variantResultList"),
   bulkModeBtn: $("#bulkModeBtn"),
   bulkToolbar: $("#bulkToolbar"),
   bulkSelectedCount: $("#bulkSelectedCount"),
@@ -531,6 +610,24 @@ function renderTabs() {
   els.riskTabs.replaceChildren(
     ...RISK_OPTIONS.map((item) => createChip(item, state.risk, "risk")),
   );
+  renderIcon();
+}
+
+function renderQuickScenes() {
+  const items = QUICK_SCENES.map((scene) => {
+    const button = document.createElement("button");
+    const active = state.category === scene.category && state.tone === scene.tone && state.risk === scene.risk;
+    button.className = `quick-scene${active ? " is-active" : ""}`;
+    button.type = "button";
+    button.dataset.quickScene = scene.key;
+    button.innerHTML = `
+      <i data-lucide="${scene.icon}" aria-hidden="true"></i>
+      <span>${scene.label}</span>
+      <small>${scene.hint}</small>
+    `;
+    return button;
+  });
+  els.quickScenes.replaceChildren(...items);
   renderIcon();
 }
 
@@ -696,6 +793,9 @@ function renderList(pool) {
         <button class="tiny-button" type="button" title="复制" aria-label="复制" data-action="copy" data-id="${phrase.id}">
           <i data-lucide="copy" aria-hidden="true"></i>
         </button>
+        <button class="tiny-button" type="button" title="生成变体" aria-label="生成变体" data-action="variant" data-id="${phrase.id}">
+          <i data-lucide="sparkles" aria-hidden="true"></i>
+        </button>
         ${
           isCustom
             ? `<button class="tiny-button" type="button" title="编辑" aria-label="编辑" data-action="edit" data-id="${phrase.id}">
@@ -771,6 +871,20 @@ function pickRandom() {
   selectPhrase(picked.id);
 }
 
+function applyQuickScene(key) {
+  const scene = QUICK_SCENES.find((item) => item.key === key);
+  if (!scene) return;
+  state.category = scene.category;
+  state.tone = scene.tone;
+  state.risk = scene.risk;
+  state.search = "";
+  els.searchInput.value = "";
+  setView("home");
+  render();
+  pickRandom();
+  showToast(`${scene.label}，已备好几句`);
+}
+
 async function copyPhrase(phrase) {
   if (!phrase) return;
   try {
@@ -787,6 +901,150 @@ async function copyPhrase(phrase) {
     textarea.remove();
   }
   showToast("已复制，开麦如有神助");
+}
+
+function renderVariantStyles() {
+  els.variantStyleButtons.replaceChildren(
+    ...VARIANT_STYLES.map((style) => {
+      const button = document.createElement("button");
+      button.className = "variant-style";
+      button.type = "button";
+      button.dataset.variantStyle = style.key;
+      button.innerHTML = `<i data-lucide="${style.icon}" aria-hidden="true"></i><span>${style.label}</span>`;
+      return button;
+    }),
+  );
+  renderIcon();
+}
+
+function renderVariantResults() {
+  if (!state.variantResults.length) {
+    els.variantResultList.innerHTML = `<div class="empty-state">生成结果会出现在这里，可复制或收进句库</div>`;
+    return;
+  }
+
+  els.variantResultList.replaceChildren(
+    ...state.variantResults.map((item, index) => {
+      const result = document.createElement("article");
+      result.className = "variant-result";
+      result.innerHTML = `
+        <strong>${escapeHtml(item.text)}</strong>
+        <span>${escapeHtml(item.note || "AI 变体")}</span>
+        <div class="variant-actions">
+          <button class="tiny-text-button" type="button" data-action="copy-variant" data-index="${index}">
+            <i data-lucide="copy" aria-hidden="true"></i>复制
+          </button>
+          <button class="tiny-text-button" type="button" data-action="add-variant" data-index="${index}">
+            <i data-lucide="plus" aria-hidden="true"></i>入库
+          </button>
+        </div>
+      `;
+      return result;
+    }),
+  );
+  renderIcon();
+}
+
+function openVariantDialog(phrase) {
+  if (!phrase) {
+    showToast("先选中一句，再生变体");
+    return;
+  }
+  state.variantPhraseId = phrase.id;
+  state.variantResults = [];
+  els.variantOriginal.textContent = phrase.text;
+  els.variantStatus.textContent = "选一种风格，AI 会给出可复制的新版本";
+  renderVariantStyles();
+  renderVariantResults();
+  openToolDialog(els.variantDialog);
+}
+
+function localVariantFallback(text, style) {
+  const clean = trimSentencePeriod(text);
+  const templates = {
+    classic: [`非我不敌，实乃一时韬光养晦`, `此番小挫，权当卧薪尝胆`, `胜败乃兵家常事，此局尚有东风`],
+    yin: [`阁下这手操作，颇有春秋笔法`, `你这一下，倒把剧本写得明明白白`, `我先替峡谷记你一功`],
+    soft: [`我先回泉水喝口风，等会再来`, `这波我轻轻倒下，重重理解`, `问题不大，我只是换个角度看地图`],
+    king: [`我不是倒下，是去泉水补一段装备说明`, `先别急，我这叫以身试草`, `这波算我开视野，代价略显隆重`],
+    safe: [`这波我处理得一般，下次稳住`, `先别急，补状态再打`, `我这波有点急，下一波好好来`],
+  };
+  return (templates[style.key] || templates.soft).map((line) => ({
+    text: trimSentencePeriod(line === clean ? `${line}改一版` : line),
+    category: inferPhrase(clean).category,
+    tone: style.tone,
+    risk: style.risk,
+    note: style.label.replace("版", ""),
+  }));
+}
+
+async function fetchVariants(text, style) {
+  const endpoint = relayUrl("/variant");
+  if (!endpoint) return localVariantFallback(text, style);
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text,
+      style: style.key,
+      styleLabel: style.label,
+      categories: CATEGORIES.filter((item) => item.key !== "all").map(({ key, label }) => ({ key, label })),
+      tones: TONES.filter((item) => item.key !== "all").map(({ key, label }) => ({ key, label })),
+      risks: Object.entries(RISK_LABELS).map(([key, label]) => ({ key, label })),
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `Variant failed ${response.status}`);
+  const variants = normalizeCollectedPhrases(data.variants || []).map((variant) => ({
+    ...variant,
+    tone: variant.tone || style.tone,
+    risk: variant.risk || style.risk,
+    note: variant.note || style.label.replace("版", ""),
+  }));
+  return variants.length ? variants : localVariantFallback(text, style);
+}
+
+async function generateVariant(styleKey) {
+  const phrase = allPhrases().find((item) => item.id === state.variantPhraseId);
+  const style = VARIANT_STYLES.find((item) => item.key === styleKey);
+  if (!phrase || !style) return;
+
+  els.variantStatus.textContent = `${style.label}生成中`;
+  els.variantStyleButtons.querySelectorAll("button").forEach((button) => {
+    button.disabled = true;
+    button.classList.toggle("is-active", button.dataset.variantStyle === styleKey);
+  });
+  try {
+    state.variantResults = await fetchVariants(phrase.text, style);
+    els.variantStatus.textContent = `已生成 ${state.variantResults.length} 条，可择善而从`;
+  } catch (error) {
+    console.warn(error);
+    state.variantResults = localVariantFallback(phrase.text, style);
+    els.variantStatus.textContent = "AI 暂不可用，已给本地兜底变体";
+  } finally {
+    els.variantStyleButtons.querySelectorAll("button").forEach((button) => {
+      button.disabled = false;
+    });
+    renderVariantResults();
+  }
+}
+
+function addVariantToLibrary(index) {
+  const variant = state.variantResults[Number(index)];
+  if (!variant) return;
+  const phrase = normalizePhrase({
+    id: `custom-${makeId()}`,
+    text: variant.text,
+    category: variant.category || inferPhrase(variant.text).category,
+    tone: variant.tone || inferPhrase(variant.text).tone,
+    risk: variant.risk || "safe",
+    note: variant.note || "AI 变体",
+  });
+  state.custom.unshift(phrase);
+  persistLocal({ sync: true });
+  render();
+  selectPhrase(phrase.id);
+  showToast("变体已收进句库");
 }
 
 function toggleFavorite(id) {
@@ -1243,55 +1501,21 @@ function cleanCollectedLine(line) {
   );
 }
 
+function collectedLineSkipReason(line, seen = new Set(), acceptedTexts = new Set()) {
+  if (!line) return "空行";
+  if (line.length < MIN_COLLECTED_LENGTH) return "太短，不像可用文案";
+  if (line.length > 90) return "太长，游戏里不便复制";
+  if (!/[\u4e00-\u9fa5]/.test(line)) return "缺少中文内容";
+  if (/^[\d\s:：.,，、-]+$/.test(line)) return "只有数字或符号";
+  const noiseWord = COLLECTED_NOISE_WORDS.find((word) => line.includes(word));
+  if (noiseWord) return `命中噪音词：${noiseWord}`;
+  if (acceptedTexts.has(line)) return "已被 AI 选为候选";
+  if (seen.has(line)) return "重复内容";
+  return "";
+}
+
 function shouldSkipCollectedLine(line) {
-  if (!line || line.length < MIN_COLLECTED_LENGTH || line.length > 90) return true;
-  if (!/[\u4e00-\u9fa5]/.test(line)) return true;
-  if (/^[\d\s:：.,，、-]+$/.test(line)) return true;
-  const noiseWords = [
-    "阅读全文",
-    "阅读原文",
-    "点击",
-    "关注",
-    "公众号",
-    "微信",
-    "作者",
-    "来源",
-    "声明",
-    "广告",
-    "二维码",
-    "扫码",
-    "图片",
-    "视频",
-    "播放",
-    "菜单",
-    "投诉",
-    "在看",
-    "转发",
-    "分享",
-    "复制链接",
-    "留言",
-    "评论",
-    "发布于",
-    "展开",
-    "收起",
-    "订阅",
-    "搜一搜",
-    "预览时标签不可点",
-    "继续滑动看下一个",
-    "向上滑动看下一个",
-    "使用完整服务",
-    "轻点两下取消赞",
-    "取消赞",
-    "引导切换",
-    "功能提示",
-    "含自贬词",
-    "用迹说明",
-    "公网地址",
-    "多设备",
-    "电脑打开",
-    "手机也能",
-  ];
-  return noiseWords.some((word) => line.includes(word));
+  return Boolean(collectedLineSkipReason(line));
 }
 
 function extractPhraseCandidates(text) {
@@ -1337,14 +1561,95 @@ function normalizeCollectedPhrases(values) {
     .slice(0, MAX_COLLECTED_PHRASES);
 }
 
+function sourceSegments(text) {
+  return String(text || "")
+    .replace(/\r/g, "\n")
+    .replace(/[|｜]/g, "\n")
+    .replace(/[“”"‘’《》]/g, "")
+    .split(/\n|[。！？!?；;]+/)
+    .map((part) => cleanCollectedLine(part))
+    .filter(Boolean);
+}
+
+function buildRejectedPhrases(text, acceptedPhrases) {
+  const acceptedTexts = new Set(acceptedPhrases.map((phrase) => phrase.text));
+  const seen = new Set();
+  const rejected = [];
+  sourceSegments(text).forEach((line) => {
+    const reason = collectedLineSkipReason(line, seen, acceptedTexts);
+    if (reason && reason !== "已被 AI 选为候选") {
+      rejected.push({ text: line, reason });
+    }
+    seen.add(line);
+  });
+  return rejected.slice(0, 36);
+}
+
+function renderCollectorWorkbench() {
+  const sourceText = state.collectedSource.text || "";
+  const sourceLines = sourceSegments(sourceText);
+  els.sourceLineCount.textContent = sourceLines.length ? `${sourceLines.length} 行` : "未抓取";
+  if (sourceText) {
+    const preview = sourceLines.slice(0, 14).map((line) => `<p>${escapeHtml(line)}</p>`).join("");
+    els.sourcePreview.innerHTML = `
+      ${state.collectedSource.title ? `<strong>${escapeHtml(state.collectedSource.title)}</strong>` : ""}
+      ${preview || `<div class="empty-state">正文为空，可换个链接试试</div>`}
+    `;
+  } else {
+    els.sourcePreview.innerHTML = `<div class="empty-state">粘贴链接后，这里显示原文片段</div>`;
+  }
+
+  els.candidateCount.textContent = `${state.collectedPhrases.length} 条`;
+  if (!state.collectedPhrases.length) {
+    els.candidateList.innerHTML = `<div class="empty-state">候选句会在这里勾选确认</div>`;
+  } else {
+    els.candidateList.replaceChildren(
+      ...state.collectedPhrases.map((phrase) => {
+        const item = document.createElement("label");
+        item.className = "candidate-item";
+        item.innerHTML = `
+          <input type="checkbox" data-action="toggle-candidate" data-text="${escapeHtml(phrase.text)}" ${state.selectedCollectedTexts.has(phrase.text) ? "checked" : ""} />
+          <span>
+            <strong>${escapeHtml(phrase.text)}</strong>
+            <small>${escapeHtml(findOption(CATEGORIES, phrase.category)?.label || "未分类")} · ${escapeHtml(findOption(TONES, phrase.tone)?.label || "未知语气")} · ${escapeHtml(phrase.note || "AI 提炼")}</small>
+          </span>
+        `;
+        return item;
+      }),
+    );
+  }
+
+  els.rejectedCount.textContent = `${state.rejectedPhrases.length} 条`;
+  if (!state.rejectedPhrases.length) {
+    els.rejectedList.innerHTML = `<div class="empty-state">噪音字段会在这里说明原因</div>`;
+  } else {
+    els.rejectedList.replaceChildren(
+      ...state.rejectedPhrases.slice(0, 18).map((entry) => {
+        const item = document.createElement("article");
+        item.className = "rejected-item";
+        item.innerHTML = `
+          <strong>${escapeHtml(entry.text)}</strong>
+          <span>${escapeHtml(entry.reason)}</span>
+        `;
+        return item;
+      }),
+    );
+  }
+  renderIcon();
+}
+
 function setCollectedPhrases(phrases) {
   state.collectedPhrases = normalizeCollectedPhrases(phrases);
+  state.selectedCollectedTexts = new Set(state.collectedPhrases.map((phrase) => phrase.text));
   els.collectedText.value = state.collectedPhrases.map((phrase) => phrase.text).join("\n");
+  state.rejectedPhrases = buildRejectedPhrases(state.collectedSource.text, state.collectedPhrases);
+  renderCollectorWorkbench();
   refreshCollectorStatus();
 }
 
 function syncCollectedFromTextarea() {
   const previous = new Map(state.collectedPhrases.map((phrase) => [phrase.text, phrase]));
+  const previousSelected = new Set(state.selectedCollectedTexts);
   state.collectedPhrases = extractPhraseCandidates(els.collectedText.value).map(
     (text) =>
       previous.get(text) ||
@@ -1354,6 +1659,13 @@ function syncCollectedFromTextarea() {
         extractedBy: "manual",
       }),
   );
+  state.selectedCollectedTexts = new Set(
+    state.collectedPhrases
+      .filter((phrase) => previous.size === 0 || previousSelected.has(phrase.text) || !previous.has(phrase.text))
+      .map((phrase) => phrase.text),
+  );
+  state.rejectedPhrases = buildRejectedPhrases(state.collectedSource.text, state.collectedPhrases);
+  renderCollectorWorkbench();
 }
 
 function refreshCollectorStatus() {
@@ -1383,6 +1695,11 @@ async function collectFromUrl() {
     const data = await fetchArticleText(url, collectorAbortController.signal);
     stopCollectorProgressTimer();
     setCollectorProgress("整理候选文案", 92, "整理文案");
+    state.collectedSource = {
+      title: data.title || "",
+      text: data.text || "",
+      url: data.url || url,
+    };
     const phrases = normalizeCollectedPhrases(data.phrases || []);
     setCollectedPhrases(phrases);
     if (phrases.length) {
@@ -1390,6 +1707,8 @@ async function collectFromUrl() {
       showToast("AI 已提炼候选文案，可以入库");
     } else {
       els.collectedText.value = "";
+      state.rejectedPhrases = buildRejectedPhrases(state.collectedSource.text, []);
+      renderCollectorWorkbench();
       setCollectorProgress("完成，未提炼出文案", 100, "未提炼出文案");
       showToast("AI 没找到适合入库的短句");
     }
@@ -1415,10 +1734,10 @@ function delay(ms) {
 
 async function importCollectedPhrases() {
   syncCollectedFromTextarea();
-  const candidates = state.collectedPhrases;
+  const candidates = state.collectedPhrases.filter((phrase) => state.selectedCollectedTexts.has(phrase.text));
   if (!candidates.length) {
-    showToast("暂无可入库的候选文案");
-    setCollectorProgress("暂无候选文案", 0, "等待链接");
+    showToast("先勾选要入库的候选文案");
+    setCollectorProgress("暂无勾选候选", 0, "等待确认");
     return;
   }
 
@@ -1472,6 +1791,10 @@ function clearCollector() {
   els.sourceUrl.value = "";
   els.collectedText.value = "";
   state.collectedPhrases = [];
+  state.collectedSource = { title: "", text: "", url: "" };
+  state.rejectedPhrases = [];
+  state.selectedCollectedTexts = new Set();
+  renderCollectorWorkbench();
   stopCollectorProgressTimer();
   setCollectorProgress("等待开始", 0, "等待链接");
 }
@@ -1539,6 +1862,8 @@ function render() {
   renderStats(pool);
   renderBulkControls(pool);
   renderList(pool);
+  renderQuickScenes();
+  renderCollectorWorkbench();
   renderImportPreview();
   renderTrash();
   els.favoriteBtn.classList.toggle("is-active", state.favorites.has(state.currentId));
@@ -1765,6 +2090,12 @@ async function handleFormSubmit(event) {
 
 function bindEvents() {
   document.addEventListener("click", (event) => {
+    const quickScene = event.target.closest("[data-quick-scene]");
+    if (quickScene) {
+      applyQuickScene(quickScene.dataset.quickScene);
+      return;
+    }
+
     const chip = event.target.closest(".chip");
     if (chip) {
       state[chip.dataset.group] = chip.dataset.key;
@@ -1777,6 +2108,16 @@ function bindEvents() {
 
     const actionButton = event.target.closest("[data-action]");
     if (!actionButton) return;
+    if (actionButton.dataset.action === "toggle-candidate") {
+      const text = actionButton.dataset.text;
+      if (actionButton.checked) {
+        state.selectedCollectedTexts.add(text);
+      } else {
+        state.selectedCollectedTexts.delete(text);
+      }
+      renderCollectorWorkbench();
+      return;
+    }
     event.preventDefault();
     const phrase = allPhrases().find((item) => item.id === actionButton.dataset.id);
     if (actionButton.dataset.action === "bulk-toggle") toggleBulkSelection(actionButton.dataset.id);
@@ -1789,6 +2130,9 @@ function bindEvents() {
     }
     if (actionButton.dataset.action === "favorite") toggleFavorite(actionButton.dataset.id);
     if (actionButton.dataset.action === "copy") copyPhrase(phrase);
+    if (actionButton.dataset.action === "variant") openVariantDialog(phrase);
+    if (actionButton.dataset.action === "copy-variant") copyPhrase(state.variantResults[Number(actionButton.dataset.index)]);
+    if (actionButton.dataset.action === "add-variant") addVariantToLibrary(actionButton.dataset.index);
     if (actionButton.dataset.action === "edit") beginEdit(actionButton.dataset.id);
     if (actionButton.dataset.action === "delete") deleteCustom(actionButton.dataset.id);
     if (actionButton.dataset.action === "restore-trash") restoreTrash(actionButton.dataset.id);
@@ -1801,6 +2145,9 @@ function bindEvents() {
   els.randomBtn.addEventListener("click", pickRandom);
   els.copyBtn.addEventListener("click", () => {
     copyPhrase(allPhrases().find((item) => item.id === state.currentId));
+  });
+  els.variantCurrentBtn.addEventListener("click", () => {
+    openVariantDialog(allPhrases().find((item) => item.id === state.currentId));
   });
   els.favoriteBtn.addEventListener("click", () => toggleFavorite(state.currentId));
   els.exportBtn.addEventListener("click", exportLibrary);
@@ -1831,6 +2178,14 @@ function bindEvents() {
   els.closeSyncBtn.addEventListener("click", () => closeToolDialog(els.syncDialog));
   els.syncDialog.addEventListener("click", (event) => {
     if (event.target === els.syncDialog) closeToolDialog(els.syncDialog);
+  });
+  els.closeVariantBtn.addEventListener("click", () => closeToolDialog(els.variantDialog));
+  els.variantDialog.addEventListener("click", (event) => {
+    if (event.target === els.variantDialog) closeToolDialog(els.variantDialog);
+  });
+  els.variantStyleButtons.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-variant-style]");
+    if (button) generateVariant(button.dataset.variantStyle);
   });
   els.fetchUrlBtn.addEventListener("click", collectFromUrl);
   els.importCollectedBtn.addEventListener("click", importCollectedPhrases);

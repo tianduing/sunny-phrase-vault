@@ -42,6 +42,9 @@ export default {
       if (url.pathname === "/collect/url") {
         return collectUrl(payload, env);
       }
+      if (url.pathname === "/variant") {
+        return variantPhrase(payload, env);
+      }
       if (url.pathname === "/polish") {
         return polishPhrase(payload, env);
       }
@@ -309,6 +312,103 @@ async function polishPhrase(payload, env) {
   }
 }
 
+async function variantPhrase(payload, env) {
+  const apiKey = env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return json({ error: "Missing OPENAI_API_KEY" }, 500);
+  }
+
+  const text = normalizeCollectedLine(payload.text);
+  if (!text) {
+    return json({ error: "Missing text" }, 400);
+  }
+
+  const categories = Array.isArray(payload.categories) ? payload.categories : defaultCategories();
+  const tones = Array.isArray(payload.tones) ? payload.tones : defaultTones();
+  const style = normalizeVariantStyle(payload.style, payload.styleLabel);
+  const baseUrl = (env.OPENAI_BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
+  const model = env.OPENAI_MODEL || DEFAULT_MODEL;
+  const prompt = [
+    "你是游戏短句变体 Agent，只输出 JSON",
+    "任务：把用户的一句游戏发言改写成同一意思的 3 个可直接复制版本",
+    "每句 6 到 60 个中文字符，去掉末尾句号、问号、感叹号和省略号",
+    "不要侮辱、不要仇恨、不要威胁、不要暴露个人信息",
+    "不要输出解释，不要编号，不要把原句原样返回",
+    "按目标风格写，但保持像真实玩家聊天，不要 AI 腔",
+    "category 必须从 categories 的 key 中选",
+    "tone 必须从 tones 的 key 中选",
+    "risk 必须从 safe、spicy、danger 中选；降火文明版必须 safe",
+    "note 用 2 到 6 个中文字符说明风格",
+    "",
+    `目标风格：${style.label}`,
+    `风格要求：${style.instruction}`,
+    `categories: ${JSON.stringify(categories)}`,
+    `tones: ${JSON.stringify(tones)}`,
+    `原句：${text}`,
+  ].join("\n");
+
+  const upstream = await fetch(`${baseUrl}/v1/responses`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      input: prompt,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "phrase_variants",
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              variants: {
+                type: "array",
+                minItems: 1,
+                maxItems: 3,
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    text: { type: "string" },
+                    category: { type: "string" },
+                    tone: { type: "string" },
+                    risk: { type: "string", enum: ["safe", "spicy", "danger"] },
+                    note: { type: "string" },
+                  },
+                  required: ["text", "category", "tone", "risk", "note"],
+                },
+              },
+            },
+            required: ["variants"],
+          },
+        },
+      },
+    }),
+  });
+
+  if (!upstream.ok) {
+    return json({ error: "AI upstream failed" }, 502);
+  }
+
+  const data = await upstream.json();
+  const outputText = extractOutputText(data);
+  if (!outputText) {
+    return json({ error: "AI returned empty output" }, 502);
+  }
+
+  try {
+    const parsed = JSON.parse(outputText);
+    return json({
+      variants: sanitizeExtractedPhrases(parsed.variants, categories, tones),
+    });
+  } catch {
+    return json({ error: "AI returned invalid JSON" }, 502);
+  }
+}
+
 async function extractPhrasesWithAi(article, env) {
   const apiKey = env.OPENAI_API_KEY;
   if (!apiKey) return [];
@@ -539,6 +639,36 @@ function normalizeNote(value) {
   const noiseNotes = ["功能提示", "引导切换", "用迹说明", "含自贬词", "标签"];
   if (noiseNotes.some((word) => note.includes(word))) return "AI 提炼";
   return note.slice(0, 24);
+}
+
+function normalizeVariantStyle(style, label) {
+  const key = String(style || "").trim();
+  const styles = {
+    classic: {
+      label: "成语典故版",
+      instruction: "多用成语、典故、兵法口吻，可以化用古诗文，但不要晦涩",
+    },
+    yin: {
+      label: "阴阳怪气版",
+      instruction: "轻微调侃，点到为止，像春秋笔法，不要脏话和人身攻击",
+    },
+    soft: {
+      label: "清新自嘲版",
+      instruction: "清爽、松弛、带自嘲，像输一波也能体面圆场",
+    },
+    king: {
+      label: "王者嘴替版",
+      instruction: "更贴近王者对局语境，围绕泉水、草丛、兵线、团战、复活等词写",
+    },
+    safe: {
+      label: "降火文明版",
+      instruction: "把情绪降下来，文明、克制、适合避免吵架，risk 必须是 safe",
+    },
+  };
+  return styles[key] || {
+    label: String(label || "自由变体").slice(0, 24),
+    instruction: "改写得更好笑、更凝练、更适合游戏内复制发送",
+  };
 }
 
 function defaultCategories() {
